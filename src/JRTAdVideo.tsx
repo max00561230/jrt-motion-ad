@@ -33,15 +33,15 @@ const C = {
   surfaceCard: "#1e1e1e",
 };
 
-// ── Section Timing ──
+// ── Section Timing (updated — products extended for screenshots) ──
 const SECTION = {
   title:    { start: 0,    dur: 243 },
   mission:  { start: 243,  dur: 408 },
-  products: { start: 651,  dur: 501 },
-  services: { start: 1152, dur: 413 },
-  trust:    { start: 1565, dur: 438 },
-  cta:      { start: 2003, dur: 429 },
-  endcard:  { start: 2432, dur: 150 },
+  products: { start: 651,  dur: 700 },   // extended from 501 → 700 for scrolling screenshots
+  services: { start: 1351, dur: 413 },
+  trust:    { start: 1764, dur: 438 },
+  cta:      { start: 2202, dur: 429 },
+  endcard:  { start: 2631, dur: 150 },
 };
 
 // ── Animation Helpers ──
@@ -129,6 +129,46 @@ const GradientBG: React.FC = () => (
     }}
   />
 );
+
+// ── SCROLLING SCREENSHOT COMPONENT ──
+// Shows a screenshot that scrolls vertically, simulating a screen recording
+const ScrollingScreenshot: React.FC<{
+  src: string;
+  x: number;
+  width: number;
+  height: number;
+  localFrame: number;
+  startFrame: number;
+  scrollSpeed?: number;
+}> = ({ src, x, width, height, localFrame, startFrame, scrollSpeed = 1.2 }) => {
+  const fadeIn = clamp(localFrame - startFrame, [0, 15], [0, 1]);
+  const scrollOffset = Math.max(0, localFrame - startFrame - 10) * scrollSpeed;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: x,
+        top: 100,
+        width,
+        height,
+        overflow: "hidden",
+        borderRadius: 12,
+        border: `2px solid ${C.crimsonDark}60`,
+        opacity: fadeIn,
+        boxShadow: `0 8px 40px ${C.dark}cc`,
+      }}
+    >
+      <Img
+        src={staticFile(src)}
+        style={{
+          width,
+          transform: `translateY(-${scrollOffset}px)`,
+        }}
+      />
+    </div>
+  );
+};
 
 // ── SCENE 1: Title Intro ──
 const TitleIntro: React.FC = () => {
@@ -311,7 +351,7 @@ const MissionScene: React.FC = () => {
   );
 };
 
-// ── SCENE 3: Products ──
+// ── SCENE 3: Products with Scrolling Screenshots ──
 const ProductsScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -319,6 +359,7 @@ const ProductsScene: React.FC = () => {
 
   const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
 
+  // Products with their screenshots
   const products = [
     {
       icon: "🌾",
@@ -326,6 +367,13 @@ const ProductsScene: React.FC = () => {
       price: "$49",
       tagline: "Track your land, your way",
       features: ["Owner & parcel records", "Activity logging & goals", "Offline-first PWA"],
+      screenshots: [
+        "images/apps/flm-dashboard.png",
+        "images/apps/flm-parcels.png",
+        "images/apps/flm-map.png",
+      ],
+      screenshotStart: 60,   // frame within products section to start showing
+      cardStart: 30,
     },
     {
       icon: "🐄",
@@ -333,6 +381,12 @@ const ProductsScene: React.FC = () => {
       price: "$79",
       tagline: "Camera-powered herd management",
       features: ["Photo-based animal ID", "11 record types", "Offline-first PWA"],
+      screenshots: [
+        "images/apps/herdlook-home.png",
+        "images/apps/herdlook-cattle.png",
+      ],
+      screenshotStart: 250,
+      cardStart: 220,
     },
     {
       icon: "💡",
@@ -340,6 +394,12 @@ const ProductsScene: React.FC = () => {
       price: "FREE",
       tagline: "Test before you invest",
       features: ["6-question assessment", "Instant scored verdict", "Offline-first PWA"],
+      screenshots: [
+        "images/apps/idea-validator.png",
+        "images/apps/idea-validator-results.png",
+      ],
+      screenshotStart: 430,
+      cardStart: 400,
     },
   ];
 
@@ -349,9 +409,9 @@ const ProductsScene: React.FC = () => {
       <Particles opacity={0.08} />
       <AbsoluteFill
         style={{
-          justifyContent: "center",
+          justifyContent: "flex-start",
           alignItems: "center",
-          padding: 80,
+          padding: "50px 80px",
           flexDirection: "column",
         }}
       >
@@ -368,90 +428,174 @@ const ProductsScene: React.FC = () => {
         >
           Ready-made apps. <span style={{ color: C.gold }}>Real solutions.</span>
         </div>
+
+        {/* Products area — cards on left, screenshots scroll on right */}
         <div
           style={{
             display: "flex",
-            gap: 32,
-            marginTop: 50,
+            marginTop: 40,
+            width: "100%",
+            gap: 40,
+            flex: 1,
           }}
         >
-          {products.map((p, i) => {
-            const delay = 30 + i * 18;
-            const progress = springIn(localFrame, fps, delay);
-            const cardY = interpolate(progress, [0, 1], [80, 0]);
-            const cardOpacity = clamp(localFrame - delay, [0, 15], [0, 1]);
-            return (
-              <div
-                key={i}
-                style={{
-                  background: `linear-gradient(180deg, ${C.surfaceCard} 0%, #14141480 100%)`,
-                  border: `1px solid ${p.price === "FREE" ? C.gold + "60" : C.crimsonDark + "40"}`,
-                  borderRadius: 16,
-                  padding: "36px 28px",
-                  width: 280,
-                  opacity: cardOpacity,
-                  transform: `translateY(${cardY}px)`,
-                }}
-              >
-                <div style={{ fontSize: 40, marginBottom: 14 }}>{p.icon}</div>
+          {/* Left: Product cards stacked */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 24, width: 340 }}>
+            {products.map((p, i) => {
+              const delay = p.cardStart;
+              const progress = springIn(localFrame, fps, delay);
+              const cardY = interpolate(progress, [0, 1], [80, 0]);
+              const cardOpacity = clamp(localFrame - delay, [0, 15], [0, 1]);
+
+              // Highlight the currently featured product
+              const isFeatured = localFrame >= p.screenshotStart - 20 && localFrame < p.screenshotStart + 200;
+
+              return (
                 <div
+                  key={i}
                   style={{
-                    fontSize: 24,
-                    fontWeight: 700,
-                    color: C.white,
-                    marginBottom: 4,
+                    background: isFeatured
+                      ? `linear-gradient(135deg, ${C.crimson}22 0%, ${C.surfaceCard} 100%)`
+                      : `linear-gradient(180deg, ${C.surfaceCard} 0%, #14141480 100%)`,
+                    border: `1px solid ${p.price === "FREE" ? C.gold + "60" : isFeatured ? C.crimsonLight + "80" : C.crimsonDark + "40"}`,
+                    borderRadius: 16,
+                    padding: "24px 24px",
+                    opacity: cardOpacity,
+                    transform: `translateY(${cardY}px)`,
+                    transition: "all 0.3s",
                   }}
                 >
-                  {p.name}
-                </div>
-                <div style={{ fontSize: 15, color: C.gray400, marginBottom: 14, lineHeight: 1.5 }}>
-                  {p.tagline}
-                </div>
-                <div
-                  style={{
-                    display: "inline-block",
-                    background: p.price === "FREE"
-                      ? `${C.gold}22`
-                      : `${C.crimson}22`,
-                    color: p.price === "FREE" ? C.gold : C.crimsonLight,
-                    fontSize: 14,
-                    fontWeight: 700,
-                    padding: "4px 14px",
-                    borderRadius: 6,
-                    marginBottom: 16,
-                  }}
-                >
-                  {p.price === "FREE" ? "FREE" : `One-Time · ${p.price}`}
-                </div>
-                <div>
-                  {p.features.map((f, fi) => {
-                    const fDelay = delay + 30 + fi * 6;
-                    const fOpacity = clamp(localFrame - fDelay, [0, 10], [0, 1]);
-                    return (
-                      <div
-                        key={fi}
-                        style={{
-                          fontSize: 15,
-                          color: C.gray400,
-                          padding: "3px 0",
-                          opacity: fOpacity,
-                        }}
-                      >
-                        ✓ {f}
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ fontSize: 32 }}>{p.icon}</div>
+                    <div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: C.white }}>
+                        {p.name}
                       </div>
-                    );
-                  })}
+                      <div style={{ fontSize: 13, color: C.gray400 }}>
+                        {p.tagline}
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: "inline-block",
+                      background: p.price === "FREE"
+                        ? `${C.gold}22`
+                        : `${C.crimson}22`,
+                      color: p.price === "FREE" ? C.gold : C.crimsonLight,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      padding: "3px 12px",
+                      borderRadius: 6,
+                      marginTop: 10,
+                    }}
+                  >
+                    {p.price === "FREE" ? "FREE" : `One-Time · ${p.price}`}
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    {p.features.map((f, fi) => {
+                      const fDelay = delay + 20 + fi * 5;
+                      const fOpacity = clamp(localFrame - fDelay, [0, 8], [0, 1]);
+                      return (
+                        <div
+                          key={fi}
+                          style={{
+                            fontSize: 13,
+                            color: C.gray400,
+                            padding: "1px 0",
+                            opacity: fOpacity,
+                          }}
+                        >
+                          ✓ {f}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          {/* Right: Scrolling screenshots area */}
+          <div style={{ flex: 1, position: "relative", height: 700 }}>
+            {products.map((p, i) => {
+              const screenshotStartFrame = p.screenshotStart;
+              // Each product gets a scrolling showcase window
+              const appearOpacity = clamp(localFrame - screenshotStartFrame, [0, 20], [0, 1]);
+              const disappearFrame = i < products.length - 1
+                ? products[i + 1].screenshotStart - 30
+                : SECTION.products.dur;
+              const disappearOpacity = i < products.length - 1
+                ? clamp(localFrame - disappearFrame, [0, 15], [1, 0])
+                : 1;
+              const totalOpacity = Math.min(appearOpacity, disappearOpacity);
+
+              if (totalOpacity <= 0) return null;
+
+              // Scroll through each screenshot sequentially
+              const screenshotPhase = localFrame - screenshotStartFrame;
+              const totalScreens = p.screenshots.length;
+              // Each screenshot shows for ~100 frames, scroll speed increases over time
+              const framesPerScreen = 120;
+              const currentScreenIdx = Math.min(
+                Math.floor(screenshotPhase / framesPerScreen),
+                totalScreens - 1
+              );
+              const screenLocalFrame = screenshotPhase - currentScreenIdx * framesPerScreen;
+              const scrollOffset = Math.max(0, (screenLocalFrame - 20) * 1.5);
+
+              const currentSrc = p.screenshots[currentScreenIdx];
+
+              return (
+                <AbsoluteFill key={`ss-${i}`} style={{ opacity: totalOpacity }}>
+                  {/* Product name label */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 20,
+                      left: 20,
+                      fontSize: 16,
+                      color: C.gold,
+                      fontWeight: 700,
+                      letterSpacing: 2,
+                      opacity: totalOpacity,
+                    }}
+                  >
+                    {p.icon} {p.name}
+                  </div>
+                  {/* Screenshot viewport */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 60,
+                      left: 20,
+                      right: 20,
+                      bottom: 20,
+                      borderRadius: 12,
+                      overflow: "hidden",
+                      border: `2px solid ${C.crimsonDark}80`,
+                      background: C.darkAlt,
+                    }}
+                  >
+                    <Img
+                      src={staticFile(currentSrc)}
+                      style={{
+                        width: "100%",
+                        transform: `translateY(-${scrollOffset}px) scale(1.05)`,
+                      }}
+                    />
+                  </div>
+                </AbsoluteFill>
+              );
+            })}
+          </div>
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
-// ── SCENE 4: Custom Build Services ──
+// ── SCENE 4: Custom Build Services ── (UPDATED: $79)
 const ServicesScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -509,7 +653,7 @@ const ServicesScene: React.FC = () => {
             boxShadow: `0 0 30px ${C.gold}44`,
           }}
         >
-          Starting at $75
+          Starting at $79
         </div>
         <div
           style={{
