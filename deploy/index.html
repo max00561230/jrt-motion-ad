@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jade Rose Technology</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{width:100%;height:100%;background:#0a0a0a;overflow:hidden}
+    body{display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif}
+    .wrap{width:100vw;height:100vh;position:relative;background:#000}
+    video{width:100%;height:100%;object-fit:contain;display:block}
+    .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,10,.85);z-index:10;cursor:pointer;transition:opacity .3s}
+    .overlay.off{opacity:0;pointer-events:none}
+    .circle{width:90px;height:90px;background:#b91c1c;border:4px solid #d4a843;border-radius:50%;position:relative;box-shadow:0 0 30px rgba(185,28,28,.4)}
+    .circle::after{content:'';position:absolute;top:50%;left:55%;transform:translate(-50%,-50%);border-style:solid;border-width:20px 0 20px 36px;border-color:transparent transparent transparent #fff;margin-left:4px}
+    .lbl{color:#fff;font-size:18px;font-weight:700;margin-top:18px}
+    .sub{color:#d4a843;font-size:13px;margin-top:5px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <video id="v" playsinline preload="auto"></video>
+    <div class="overlay" id="ov">
+      <div class="circle"></div>
+      <div class="lbl">▶ PLAY VIDEO</div>
+      <div class="sub">Click to start with sound</div>
+    </div>
+  </div>
+<script>
+var v=document.getElementById('v'),ov=document.getElementById('ov');
+v.src='jrt-ad.mp4';
+v.load();
+ov.onclick=function(){
+  v.muted=false;
+  var p=v.play();
+  if(p!==undefined){p.then(function(){ov.classList.add('off')}).catch(function(){v.muted=true;v.play();ov.classList.add('off')})}
+};
+v.addEventListener('ended',function(){ov.classList.remove('off')});
+v.addEventListener('error',function(){
+  ov.innerHTML='<div class="lbl" style="font-size:16px">Error loading video. Tap to retry.</div>';
+  ov.onclick=function(){location.reload()};
+});
+</script>
+</body>
+</html>
