@@ -34,22 +34,18 @@ const C = {
 };
 
 // ── Section Timing (7 products, synced to narration) ──
-// Audio durations: title 5.0s, mission 12.2s, products 50.1s, services 9.7s, trust 14.3s, cta 10.9s
-// Products narration starts immediately — cards appear from frame 30
-// Each product ~7s narration ≈ ~210 frames, 7 products = ~1470 + header buffer
-// mission: 12.2s → 366 + 30 buffer = 396
-// products: 50.1s audio → need ~1503 frames for visuals (cards synced tight) + 120 tail = 1623
-// services: 9.7s → 292 + 120 buffer = 413
-// trust: 14.3s → 430 + 75 buffer = 505
-// cta: 10.9s → 327 + 100 buffer = 428
+// Visual sections are CONTINUOUS (no gaps) — audio and visuals always aligned.
+// Each section = audio duration + tail buffer for fade-out transitions.
+// title 4.968s+3s buf=239fr → mission 12.168s+1.5s=410fr → products 50.064s+2s=1562fr
+// → services 9.72s+1.5s=337fr → trust 14.304s+2s=489fr → cta 10.896s+3s=417fr
 const SECTION = {
-  title:    { start: 0,    dur: 249 },
-  mission:  { start: 249,  dur: 396 },
-  products: { start: 645,  dur: 1623 },   // 7 products, tight sync with narration
-  services: { start: 2268, dur: 413 },
-  trust:    { start: 2681, dur: 505 },
-  cta:      { start: 3186, dur: 428 },
-  endcard:  { start: 3614, dur: 150 },
+  title:    { start: 0,    dur: 239 },
+  mission:  { start: 239,  dur: 410 },
+  products: { start: 649,  dur: 1562 },
+  services: { start: 2211, dur: 337 },
+  trust:    { start: 2548, dur: 489 },
+  cta:      { start: 3037, dur: 417 },
+  endcard:  { start: 3454, dur: 150 },
 };
 
 // ── Animation Helpers ──
@@ -271,11 +267,12 @@ const MissionScene: React.FC = () => {
   const headerY = interpolate(springIn(localFrame, fps, 0), [0, 1], [40, 0]);
 
   // UPDATED beliefs: business-benefit language, no "No bloat" or "Offline-First"
+  // Pop-out timing synced to narration — each card pops when mentioned, holds until next, then shrinks
   const beliefs = [
-    { icon: "🎯", title: "Purpose-Driven", desc: "Every feature solves a real problem" },
-    { icon: "📈", title: "Grow Your Revenue", desc: "Tools that help you earn more, effortlessly" },
-    { icon: "🔄", title: "Easy Workflow", desc: "Designed so you can focus on your business" },
-    { icon: "🛡️", title: "Your Data, Your Device", desc: "Private by design, not by policy" },
+    { icon: "🎯", title: "Purpose-Driven", desc: "Every feature solves a real problem", popFrame: 40 },
+    { icon: "📈", title: "Grow Your Revenue", desc: "Tools that help you earn more, effortlessly", popFrame: 75 },
+    { icon: "🔄", title: "Easy Workflow", desc: "Designed so you can focus on your business", popFrame: 110 },
+    { icon: "🛡️", title: "Your Data, Your Device", desc: "Private by design, not by policy", popFrame: 150 },
   ];
 
   return (
@@ -320,21 +317,60 @@ const MissionScene: React.FC = () => {
           }}
         >
           {beliefs.map((b, i) => {
-            const delay = 40 + i * 12;
-            const progress = springIn(localFrame, fps, delay);
-            const cardY = interpolate(progress, [0, 1], [60, 0]);
+            const delay = b.popFrame;
             const cardOpacity = clamp(localFrame - delay, [0, 15], [0, 1]);
+            const cardY = interpolate(springIn(localFrame, fps, delay), [0, 1], [60, 0]);
+
+            // Pop-out animation — stays enlarged while narrated, shrinks when next card pops
+            const POP_UP = 12;
+            const MIN_HOLD = 30;
+            const nextPop = (i + 1 < beliefs.length) ? beliefs[i + 1].popFrame : b.popFrame + 130;
+            const narrationDur = nextPop - b.popFrame;
+            const POP_DOWN = 12;
+            const POP_HOLD = Math.max(narrationDur - POP_UP - POP_DOWN, MIN_HOLD);
+            const POP_TOTAL = POP_UP + POP_HOLD + POP_DOWN;
+            const relFrame = localFrame - b.popFrame;
+
+            let popScale = 1;
+            let popGlow = 0;
+
+            if (relFrame >= 0 && relFrame < POP_TOTAL) {
+              if (relFrame < POP_UP) {
+                const t = relFrame / POP_UP;
+                popScale = interpolate(t, [0, 0.5, 1], [1, 1.35, 1.2]);
+                popGlow = interpolate(t, [0, 1], [0, 40]);
+              } else if (relFrame < POP_UP + POP_HOLD) {
+                const holdFrame = relFrame - POP_UP;
+                const pulse = Math.sin(holdFrame / POP_HOLD * Math.PI * 2) * 0.03;
+                popScale = 1.2 + pulse;
+                popGlow = 40;
+              } else {
+                const shrinkFrame = relFrame - POP_UP - POP_HOLD;
+                const t = shrinkFrame / POP_DOWN;
+                popScale = interpolate(t, [0, 1], [1.2, 1]);
+                popGlow = interpolate(t, [0, 1], [40, 8]);
+              }
+            } else if (relFrame >= POP_TOTAL) {
+              popScale = 1;
+              popGlow = 8;
+            }
+
             return (
               <div
                 key={i}
                 style={{
-                  background: C.surfaceCard,
-                  border: `1px solid ${C.gold}30`,
+                  background: popScale > 1.05
+                    ? `linear-gradient(135deg, ${C.crimson}22 0%, ${C.surfaceCard} 100%)`
+                    : C.surfaceCard,
+                  border: `1px solid ${popScale > 1.05 ? C.crimsonLight + "60" : C.gold + "30"}`,
                   borderRadius: 16,
                   padding: "32px 28px",
                   width: 240,
                   opacity: cardOpacity,
-                  transform: `translateY(${cardY}px)`,
+                  transform: `translateY(${cardY}px) scale(${popScale})`,
+                  boxShadow: `0 0 ${popGlow}px ${C.crimson}33, 0 4px 20px rgba(0,0,0,0.3)`,
+                  transformOrigin: "center bottom",
+                  transition: "none",
                 }}
               >
                 <div style={{ fontSize: 36, marginBottom: 12 }}>{b.icon}</div>
@@ -416,8 +452,8 @@ const ProductsScene: React.FC = () => {
     {
       icon: "🌾",
       name: "Farm Land Manager",
-      price: "$39",
-      price2: "$54.60",
+      price: "$29",
+      price2: "$40.60",
       tagline: "Track your land, your way",
       features: ["Parcel & field tracking", "Goal planning & analytics", "Built for farm owners"],
       screenshots: [
@@ -430,8 +466,8 @@ const ProductsScene: React.FC = () => {
     {
       icon: "🐄",
       name: "HerdLook",
-      price: "$49",
-      price2: "$68.60",
+      price: "$39",
+      price2: "$54.60",
       tagline: "Camera-powered herd management",
       features: ["Visual herd tracking", "Health & location alerts", "Built for livestock owners"],
       screenshots: [
@@ -444,8 +480,8 @@ const ProductsScene: React.FC = () => {
     {
       icon: "🤝",
       name: "FLM + HerdLook Bundle",
-      price: "$79",
-      price2: "$110.60",
+      price: "$59",
+      price2: "$82.60",
       tagline: "Farm & herd, one toolbox",
       features: ["All Farm Land Manager features", "All HerdLook features", "Save $9 vs buying separately"],
       screenshots: [
@@ -513,10 +549,12 @@ const ProductsScene: React.FC = () => {
               const delay = p.cardStart;
               const cardOpacity = clamp(localFrame - delay, [0, 12], [0, 1]);
 
-              // Pop-out animation synced to narration
+              // Pop-out animation synced to narration — stays enlarged entire narration, shrinks when next product starts
               const POP_UP = 12;
-              const POP_HOLD = 25;
-              const POP_DOWN = 18;
+              const nextPopFrame = (i + 1 < products.length) ? products[i + 1].screenshotStart : p.screenshotStart + 170;
+              const narrationDuration = nextPopFrame - p.screenshotStart;
+              const POP_DOWN = 15;
+              const POP_HOLD = narrationDuration - POP_UP - POP_DOWN;  // hold for entire narration window
               const POP_TOTAL = POP_UP + POP_HOLD + POP_DOWN;
               const popFrame = p.screenshotStart;  // pop when narrator says this product name
               const relFrame = localFrame - popFrame;
@@ -741,11 +779,19 @@ const ServicesScene: React.FC = () => {
     { icon: "➕", label: "And More", popFrame: 174 },
   ];
 
-  // Pop animation: scale up to 1.6x over 15 frames, hold 30 frames, shrink back to 1x over 20 frames
+  // Pop animation: scale up, hold enlarged until next tool is mentioned, then shrink back
   const POP_UP = 15;
-  const POP_HOLD = 30;
   const POP_DOWN = 20;
-  const POP_TOTAL = POP_UP + POP_HOLD + POP_DOWN;
+  const MIN_HOLD = 45;  // minimum hold so card stays visibly enlarged for ~1.5s
+  // Each tool's hold is dynamic — stays enlarged until the next tool pops (with minimum hold)
+  const toolPopDuration = (i: number) => {
+    if (i + 1 < toolCards.length) {
+      const gap = toolCards[i + 1].popFrame - toolCards[i].popFrame;
+      return Math.max(gap, POP_UP + MIN_HOLD + POP_DOWN);
+    }
+    return POP_UP + MIN_HOLD + POP_DOWN + 55; // last tool: longer hold
+  };
+  const POP_TOTAL = (i: number) => toolPopDuration(i);
 
   return (
     <AbsoluteFill>
@@ -785,6 +831,8 @@ const ServicesScene: React.FC = () => {
         >
           {toolCards.map((tool, i) => {
             const relFrame = localFrame - tool.popFrame;
+            const totalFrames = POP_TOTAL(i);
+            const holdFrames = toolPopDuration(i) - POP_UP - POP_DOWN;
 
             // Default: card is visible but dim/small
             const baseOpacity = clamp(localFrame - (tool.popFrame - 30), [0, 20], [0, 0.35]);
@@ -795,32 +843,32 @@ const ServicesScene: React.FC = () => {
             let activeGlow = 0;
             let yBounce = 0;
 
-            if (relFrame >= 0 && relFrame < POP_TOTAL) {
+            if (relFrame >= 0 && relFrame < totalFrames) {
               if (relFrame < POP_UP) {
-                // Phase 1: Pop up (scale from 1x → 1.6x)
+                // Phase 1: Pop up (scale from 1x → 1.5x)
                 const t = relFrame / POP_UP;
                 activeScale = interpolate(t, [0, 0.4, 1], [1, 1.7, 1.5]);
                 activeOpacity = interpolate(t, [0, 1], [0.35, 1]);
                 activeGlow = interpolate(t, [0, 1], [0, 60]);
                 yBounce = interpolate(t, [0, 0.5, 1], [0, -25, -15]);
-              } else if (relFrame < POP_UP + POP_HOLD) {
-                // Phase 2: Hold enlarged (slight pulse)
+              } else if (relFrame < POP_UP + holdFrames) {
+                // Phase 2: Hold enlarged (slight pulse) — stays big until next card
                 const holdFrame = relFrame - POP_UP;
-                const pulse = Math.sin(holdFrame / POP_HOLD * Math.PI * 2) * 0.05;
+                const pulse = Math.sin(holdFrame / holdFrames * Math.PI * 2) * 0.05;
                 activeScale = 1.5 + pulse;
                 activeOpacity = 1;
                 activeGlow = 60;
                 yBounce = -15;
               } else {
                 // Phase 3: Shrink back to normal
-                const shrinkFrame = relFrame - POP_UP - POP_HOLD;
+                const shrinkFrame = relFrame - POP_UP - holdFrames;
                 const t = shrinkFrame / POP_DOWN;
                 activeScale = interpolate(t, [0, 1], [1.5, 1]);
                 activeOpacity = interpolate(t, [0, 1], [1, 0.85]);
                 activeGlow = interpolate(t, [0, 1], [60, 20]);
                 yBounce = interpolate(t, [0, 1], [-15, 0]);
               }
-            } else if (relFrame >= POP_TOTAL) {
+            } else if (relFrame >= totalFrames) {
               // After pop: stay at normal size, slightly brighter
               activeScale = 1;
               activeOpacity = 0.85;
@@ -911,11 +959,18 @@ const TrustScene: React.FC = () => {
     { icon: "🛡️", title: "No Subscriptions", desc: "One purchase, yours forever", popFrame: 270 },
   ];
 
-  // Pop animation: scale up over 15 frames, hold 35 frames, shrink back over 20 frames
+  // Pop animation: scale up, hold enlarged until next trust item is mentioned, then shrink back
   const POP_UP = 15;
-  const POP_HOLD = 35;
   const POP_DOWN = 20;
-  const POP_TOTAL = POP_UP + POP_HOLD + POP_DOWN;
+  const MIN_HOLD = 45;  // minimum hold so card stays visibly enlarged for ~1.5s
+  const trustPopDuration = (i: number) => {
+    if (i + 1 < trustItems.length) {
+      const gap = trustItems[i + 1].popFrame - trustItems[i].popFrame;
+      return Math.max(gap, POP_UP + MIN_HOLD + POP_DOWN);
+    }
+    return POP_UP + MIN_HOLD + POP_DOWN + 55; // last item: longer hold
+  };
+  const POP_TOTAL = (i: number) => trustPopDuration(i);
 
   return (
     <AbsoluteFill>
@@ -953,6 +1008,8 @@ const TrustScene: React.FC = () => {
         >
           {trustItems.map((t, i) => {
             const relFrame = localFrame - t.popFrame;
+            const totalFrames = POP_TOTAL(i);
+            const holdFrames = trustPopDuration(i) - POP_UP - POP_DOWN;
 
             // Default: card is visible but dim
             const baseOpacity = clamp(localFrame - (t.popFrame - 30), [0, 20], [0, 0.3]);
@@ -962,7 +1019,7 @@ const TrustScene: React.FC = () => {
             let activeGlow = 0;
             let yBounce = 0;
 
-            if (relFrame >= 0 && relFrame < POP_TOTAL) {
+            if (relFrame >= 0 && relFrame < totalFrames) {
               if (relFrame < POP_UP) {
                 // Phase 1: Pop up
                 const tt = relFrame / POP_UP;
@@ -970,24 +1027,24 @@ const TrustScene: React.FC = () => {
                 activeOpacity = interpolate(tt, [0, 1], [0.3, 1]);
                 activeGlow = interpolate(tt, [0, 1], [0, 50]);
                 yBounce = interpolate(tt, [0, 0.5, 1], [0, -18, -12]);
-              } else if (relFrame < POP_UP + POP_HOLD) {
-                // Phase 2: Hold enlarged (slight pulse)
+              } else if (relFrame < POP_UP + holdFrames) {
+                // Phase 2: Hold enlarged — stays big until next item
                 const holdFrame = relFrame - POP_UP;
-                const pulse = Math.sin(holdFrame / POP_HOLD * Math.PI * 2) * 0.04;
+                const pulse = Math.sin(holdFrame / holdFrames * Math.PI * 2) * 0.04;
                 activeScale = 1.45 + pulse;
                 activeOpacity = 1;
                 activeGlow = 50;
                 yBounce = -12;
               } else {
                 // Phase 3: Shrink back
-                const shrinkFrame = relFrame - POP_UP - POP_HOLD;
+                const shrinkFrame = relFrame - POP_UP - holdFrames;
                 const tt = shrinkFrame / POP_DOWN;
                 activeScale = interpolate(tt, [0, 1], [1.45, 1]);
                 activeOpacity = interpolate(tt, [0, 1], [1, 0.85]);
                 activeGlow = interpolate(tt, [0, 1], [50, 15]);
                 yBounce = interpolate(tt, [0, 1], [-12, 0]);
               }
-            } else if (relFrame >= POP_TOTAL) {
+            } else if (relFrame >= totalFrames) {
               activeScale = 1;
               activeOpacity = 0.85;
               activeGlow = 15;
@@ -1196,7 +1253,7 @@ export const JRTAdVideo: React.FC = () => {
         <EndCard />
       </Sequence>
 
-      {/* ── Audio Tracks ── */}
+      {/* ── Audio Tracks (sections continuous → always in sync) ── */}
       <Audio src={staticFile("audio/bg-music.mp3")} volume={0.5} />
       <Audio src={staticFile("audio/01-title.mp3")} volume={1} />
       <Sequence from={SECTION.mission.start}>
