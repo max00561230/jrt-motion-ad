@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Jade Rose Technology</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -16,6 +16,10 @@
     .circle::after{content:'';position:absolute;top:50%;left:55%;transform:translate(-50%,-50%);border-style:solid;border-width:20px 0 20px 36px;border-color:transparent transparent transparent #fff;margin-left:4px}
     .lbl{color:#fff;font-size:18px;font-weight:700;margin-top:18px}
     .sub{color:#d4a843;font-size:13px;margin-top:5px}
+    .rotate-hint{display:none;color:#d4a843;font-size:12px;margin-top:8px;opacity:.7}
+    @media (orientation:portrait){
+      .rotate-hint{display:block}
+    }
   </style>
 </head>
 <body>
@@ -24,19 +28,62 @@
     <div class="overlay" id="ov">
       <div class="circle"></div>
       <div class="lbl">▶ PLAY VIDEO</div>
-      <div class="sub">Click to start with sound</div>
+      <div class="sub">Tap to start with sound</div>
+      <div class="rotate-hint">↻ Rotates to landscape on mobile</div>
     </div>
   </div>
 <script>
-var v=document.getElementById('v'),ov=document.getElementById('ov');
+var v=document.getElementById('v'),ov=document.getElementById('ov'),wrap=document.querySelector('.wrap');
 v.src='jrt-ad.mp4';
 v.load();
+
+function goFullscreen(){
+  var el=wrap||v;
+  var r=el.requestFullscreen||el.webkitRequestFullscreen||el.webkitEnterFullscreen||el.msRequestFullscreen;
+  if(r){
+    var p=r.call(el);
+    if(p&&p.then){p.then(function(){lockLandscape()}).catch(function(){lockLandscape()})}
+    else{lockLandscape()}
+  }else{lockLandscape()}
+}
+
+function lockLandscape(){
+  if(screen.orientation&&screen.orientation.lock){
+    screen.orientation.lock('landscape').catch(function(){});
+  }
+}
+
 ov.onclick=function(){
   v.muted=false;
   var p=v.play();
-  if(p!==undefined){p.then(function(){ov.classList.add('off')}).catch(function(){v.muted=true;v.play();ov.classList.add('off')})}
+  if(p!==undefined){
+    p.then(function(){
+      ov.classList.add('off');
+      // Try fullscreen + landscape on mobile
+      if(/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
+        goFullscreen();
+      }
+    }).catch(function(){
+      v.muted=true;
+      v.play();
+      ov.classList.add('off');
+      if(/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
+        goFullscreen();
+      }
+    });
+  }
 };
-v.addEventListener('ended',function(){ov.classList.remove('off')});
+
+v.addEventListener('ended',function(){
+  ov.classList.remove('off');
+  // Unlock orientation when done
+  if(screen.orientation&&screen.orientation.unlock){
+    screen.orientation.unlock();
+  }
+  // Exit fullscreen
+  if(document.exitFullscreen){document.exitFullscreen().catch(function(){})}
+  else if(document.webkitExitFullscreen){document.webkitExitFullscreen()}
+});
 v.addEventListener('error',function(){
   ov.innerHTML='<div class="lbl" style="font-size:16px">Error loading video. Tap to retry.</div>';
   ov.onclick=function(){location.reload()};
