@@ -12,32 +12,34 @@ import {
   Easing,
 } from "remotion";
 
-// ── JRT Brand Colors (Red-Dominant Palette) ──
+// ── JRT Brand Colors — Spring/Green Palette ──
 const C = {
-  dark: "#0a0a0a",
-  darkAlt: "#1a1a1a",
-  crimson: "#C82828",
-  crimsonLight: "#E03C3C",
-  crimsonDark: "#8B1A1A",
+  dark: "#0c1a0f",
+  darkAlt: "#142318",
+  green: "#2d8a4e",
+  greenLight: "#4CAF50",
+  greenBright: "#66bb6a",
+  greenSoft: "#a5d6a7",
   gold: "#d4a843",
   goldLight: "#e8c96a",
   goldBright: "#FFD700",
+  crimson: "#b91c1c",
+  crimsonLight: "#dc2626",
+  crimsonDark: "#7f1d1d",
   white: "#ffffff",
-  gray100: "#f5f5f5",
-  gray200: "#e0e0e0",
-  gray300: "#d1d5db",
-  gray400: "#9ca3af",
-  gray500: "#6b7280",
-  gray600: "#4b5563",
-  surface: "#141414",
-  surfaceCard: "#1e1e1e",
+  cream: "#fafdf6",
+  gray100: "#f5f8f4",
+  gray200: "#e0e8dd",
+  gray300: "#c8d4c0",
+  gray400: "#8a9a82",
+  gray500: "#5a6b52",
+  gray600: "#3a4a34",
+  surface: "#111f14",
+  surfaceCard: "#1a2e1e",
+  surfaceCardHover: "#223828",
 };
 
 // ── Section Timing (7 products, synced to narration) ──
-// Visual sections are CONTINUOUS (no gaps) — audio and visuals always aligned.
-// Each section = audio duration + tail buffer for fade-out transitions.
-// title 4.968s+3s buf=239fr → mission 12.168s+1.5s=410fr → products 50.064s+2s=1562fr
-// → services 9.72s+1.5s=337fr → trust 14.304s+2s=489fr → cta 10.896s+3s=417fr
 const SECTION = {
   title:    { start: 0,    dur: 239 },
   mission:  { start: 239,  dur: 410 },
@@ -79,18 +81,18 @@ const bodyText: React.CSSProperties = {
   maxWidth: 900,
 };
 
-// ── PARTICLES BACKGROUND (upbeat: faster particles, warm glow) ──
+// ── PARTICLES BACKGROUND ──
 const Particles: React.FC<{ opacity?: number }> = ({ opacity = 0.15 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const particles = React.useMemo(() => {
     const arr = [];
-    for (let i = 0; i < 50; i++) {  // more particles for upbeat vibe
+    for (let i = 0; i < 50; i++) {
       arr.push({
         x: Math.random() * 1920,
         y: Math.random() * 1080,
-        size: 2 + Math.random() * 5,  // slightly larger
-        speed: 0.5 + Math.random() * 1.2,  // faster
+        size: 2 + Math.random() * 5,
+        speed: 0.5 + Math.random() * 1.2,
         phase: Math.random() * Math.PI * 2,
       });
     }
@@ -101,8 +103,8 @@ const Particles: React.FC<{ opacity?: number }> = ({ opacity = 0.15 }) => {
     <AbsoluteFill style={{ opacity }}>
       {particles.map((p, i) => {
         const y = (p.y + frame * p.speed * 30) % (1080 + 20) - 10;
-        const x = p.x + Math.sin(frame * 0.03 + p.phase) * 20;  // wider sway
-        const pulse = clamp(frame * 0.06 + i * 0.2, [0, 1], [0.4, 1]);  // brighter pulse
+        const x = p.x + Math.sin(frame * 0.03 + p.phase) * 20;
+        const pulse = clamp(frame * 0.06 + i * 0.2, [0, 1], [0.4, 1]);
         return (
           <div
             key={i}
@@ -113,7 +115,7 @@ const Particles: React.FC<{ opacity?: number }> = ({ opacity = 0.15 }) => {
               width: p.size,
               height: p.size,
               borderRadius: "50%",
-              background: i % 3 === 0 ? C.gold : i % 3 === 1 ? C.crimsonLight : C.goldLight,  // more gold/crimson mix
+              background: i % 3 === 0 ? C.gold : i % 3 === 1 ? C.greenLight : C.greenSoft,
               opacity: pulse,
             }}
           />
@@ -123,19 +125,18 @@ const Particles: React.FC<{ opacity?: number }> = ({ opacity = 0.15 }) => {
   );
 };
 
-// ── RED GRADIENT BACKGROUND (warmer glow) ──
+// ── GREEN GRADIENT BACKGROUND ──
 const GradientBG: React.FC = () => (
   <AbsoluteFill
     style={{
-      background: `radial-gradient(ellipse at 30% 20%, ${C.crimson}22 0%, ${C.dark} 60%),
-                    radial-gradient(ellipse at 70% 80%, ${C.gold}18 0%, ${C.dark} 50%),
+      background: `radial-gradient(ellipse at 30% 20%, ${C.green}18 0%, ${C.dark} 60%),
+                    radial-gradient(ellipse at 70% 80%, ${C.gold}12 0%, ${C.dark} 50%),
                     ${C.dark}`,
     }}
   />
 );
 
 // ── SCROLLING SCREENSHOT COMPONENT ──
-// Updated: larger viewport (520×780), slower scroll (0.8px/frame)
 const ScrollingScreenshot: React.FC<{
   src: string;
   x: number;
@@ -158,9 +159,9 @@ const ScrollingScreenshot: React.FC<{
         height,
         overflow: "hidden",
         borderRadius: 16,
-        border: `2px solid ${C.crimsonDark}60`,
+        border: `2px solid ${C.green}40`,
         opacity: fadeIn,
-        boxShadow: `0 12px 50px ${C.dark}cc, 0 0 30px ${C.gold}22`,
+        boxShadow: `0 12px 50px ${C.dark}cc, 0 0 30px ${C.green}18`,
       }}
     >
       <Img
@@ -204,13 +205,13 @@ const TitleIntro: React.FC = () => {
           gap: 24,
         }}
       >
-        {/* Warm gold glow behind logo */}
+        {/* Warm green glow behind logo */}
         <div
           style={{
             width: 200,
             height: 200,
             borderRadius: 100,
-            background: `radial-gradient(circle, ${C.gold}44 0%, ${C.crimson}33 40%, transparent 70%)`,
+            background: `radial-gradient(circle, ${C.greenLight}33 0%, ${C.gold}22 40%, transparent 70%)`,
             position: "absolute",
             transform: `scale(${1 + 0.12 * Math.sin(frame * 0.08)})`,
             filter: "blur(25px)",
@@ -241,23 +242,23 @@ const TitleIntro: React.FC = () => {
         <div
           style={{
             ...bodyText,
-            color: C.gold,
+            color: C.greenBright,
             fontSize: 24,
-            letterSpacing: 4,
+            letterSpacing: 3,
             textTransform: "uppercase",
             fontWeight: 600,
             transform: `translateY(${tagY}px)`,
             opacity: tagOpacity,
           }}
         >
-          Digital Products That Work For You
+          Ready-Made Apps, Customized for Your Business
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
-// ── SCENE 2: Mission (UPDATED: business-benefit language) ──
+// ── SCENE 2: Mission ──
 const MissionScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -266,8 +267,6 @@ const MissionScene: React.FC = () => {
   const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
   const headerY = interpolate(springIn(localFrame, fps, 0), [0, 1], [40, 0]);
 
-  // UPDATED beliefs: business-benefit language, no "No bloat" or "Offline-First"
-  // Pop-out timing synced to narration — each card pops when mentioned, holds until next, then shrinks
   const beliefs = [
     { icon: "🎯", title: "Purpose-Driven", desc: "Every feature solves a real problem", popFrame: 40 },
     { icon: "📈", title: "Grow Your Revenue", desc: "Tools that help you earn more, effortlessly", popFrame: 75 },
@@ -305,7 +304,7 @@ const MissionScene: React.FC = () => {
             textAlign: "center",
           }}
         >
-          Simple tools. <span style={{ color: C.gold }}>Real results.</span> No guesswork.
+          Simple tools. <span style={{ color: C.greenBright }}>Real results.</span> No guesswork.
         </div>
         <div
           style={{
@@ -321,7 +320,6 @@ const MissionScene: React.FC = () => {
             const cardOpacity = clamp(localFrame - delay, [0, 15], [0, 1]);
             const cardY = interpolate(springIn(localFrame, fps, delay), [0, 1], [60, 0]);
 
-            // Pop-out animation — stays enlarged while narrated, shrinks when next card pops
             const POP_UP = 12;
             const MIN_HOLD = 30;
             const nextPop = (i + 1 < beliefs.length) ? beliefs[i + 1].popFrame : b.popFrame + 130;
@@ -360,15 +358,15 @@ const MissionScene: React.FC = () => {
                 key={i}
                 style={{
                   background: popScale > 1.05
-                    ? `linear-gradient(135deg, ${C.crimson}22 0%, ${C.surfaceCard} 100%)`
+                    ? `linear-gradient(135deg, ${C.green}22 0%, ${C.surfaceCard} 100%)`
                     : C.surfaceCard,
-                  border: `1px solid ${popScale > 1.05 ? C.crimsonLight + "60" : C.gold + "30"}`,
+                  border: `1px solid ${popScale > 1.05 ? C.greenLight + "80" : C.green + "30"}`,
                   borderRadius: 16,
                   padding: "32px 28px",
                   width: 240,
                   opacity: cardOpacity,
                   transform: `translateY(${cardY}px) scale(${popScale})`,
-                  boxShadow: `0 0 ${popGlow}px ${C.crimson}33, 0 4px 20px rgba(0,0,0,0.3)`,
+                  boxShadow: `0 0 ${popGlow}px ${C.green}33, 0 4px 20px rgba(0,0,0,0.3)`,
                   transformOrigin: "center bottom",
                   transition: "none",
                 }}
@@ -396,7 +394,7 @@ const MissionScene: React.FC = () => {
   );
 };
 
-// ── SCENE 3: Products with Scrolling Screenshots (6 apps, bigger/slower) ──
+// ── SCENE 3: Products with Scrolling Screenshots (7 apps) ──
 const ProductsScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -404,15 +402,14 @@ const ProductsScene: React.FC = () => {
 
   const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
 
-  // UPDATED: 7 products — syncing cards to narration (narration starts immediately)
-  // Header fades in frames 0-20, cards start appearing at frame 30
+  // UPDATED: 7 products with improved marketing copy
   const products = [
     {
       icon: "🍔",
       name: "Food Vendor",
-      price: "starts at $79",
-      tagline: "Serve fast, sell smart",
-      features: ["Order management dashboard", "Menu & pricing control", "Custom built for each vendor"],
+      price: "Custom build starts at $79",
+      tagline: "A custom food ordering and vendor app",
+      features: ["Menu display & customer order page", "Business profile & contact info", "Pickup details & Stripe-ready checkout"],
       screenshots: [
         "images/apps/food-vendor-dashboard.png",
         "images/apps/food-vendor-orders.png",
@@ -423,9 +420,9 @@ const ProductsScene: React.FC = () => {
     {
       icon: "🌿",
       name: "LawnCare Manager",
-      price: "starts at $79",
-      tagline: "Manage jobs, grow your business",
-      features: ["Job scheduling & tracking", "Customer management", "Custom built for each vendor"],
+      price: "Custom build starts at $79",
+      tagline: "A custom lawn care booking app",
+      features: ["Customer booking request page", "QR code workflow & service list", "Vendor response process & Stripe checkout"],
       screenshots: [
         "images/apps/lawncare-dashboard.png",
         "images/apps/lawncare-customers.png",
@@ -436,9 +433,9 @@ const ProductsScene: React.FC = () => {
     {
       icon: "🥬",
       name: "Fresh Market Vendor",
-      price: "starts at $79",
-      tagline: "From farm stand to online storefront",
-      features: ["Online vendor storefront", "Customer shopping page", "Custom built for each vendor"],
+      price: "Custom build starts at $79",
+      tagline: "A custom market vendor storefront app",
+      features: ["Product listings & vendor profile", "Customer order request page", "Pickup info & Stripe-ready checkout"],
       screenshots: [
         "images/apps/fm-vendor-shop.png",
         "images/apps/fm-customer-store.png",
@@ -450,8 +447,8 @@ const ProductsScene: React.FC = () => {
       icon: "🌾",
       name: "Farm Land Manager",
       price: "$29",
-      tagline: "Track your land, your way",
-      features: ["Parcel & field tracking", "Goal planning & analytics", "Built for farm owners"],
+      tagline: "Simple land, field, and task tracking",
+      features: ["Track fields & property notes", "Farm tasks & land activity", "Reports & local records"],
       screenshots: [
         "images/apps/flm-dashboard.png",
         "images/apps/flm-farms.png",
@@ -463,8 +460,8 @@ const ProductsScene: React.FC = () => {
       icon: "🐄",
       name: "HerdLook",
       price: "$39",
-      tagline: "Camera-powered herd management",
-      features: ["Visual herd tracking", "Health & location alerts", "Built for livestock owners"],
+      tagline: "Animal record management for livestock owners",
+      features: ["Animal records, photos & categories", "Birth dates, dam and sire info", "Sorting, notes & herd organization"],
       screenshots: [
         "images/apps/herdlook-home.png",
         "images/apps/herdlook-cattle.png",
@@ -476,8 +473,8 @@ const ProductsScene: React.FC = () => {
       icon: "🤝",
       name: "FLM + HerdLook Bundle",
       price: "$59",
-      tagline: "Farm & herd, one toolbox",
-      features: ["All Farm Land Manager features", "All HerdLook features", "Save $9 vs buying separately"],
+      tagline: "Land management and herd records together",
+      features: ["Farm Land Manager included", "HerdLook included", "Save $9 vs buying separately"],
       screenshots: [
         "images/apps/flm-dashboard.png",
         "images/apps/herdlook-home.png",
@@ -489,8 +486,8 @@ const ProductsScene: React.FC = () => {
       icon: "💡",
       name: "Idea Validator",
       price: "FREE",
-      tagline: "Test before you invest",
-      features: ["6-question assessment", "Instant scored verdict", "Free for everyone"],
+      tagline: "Test one idea before paying for a full build",
+      features: ["Guided questions & simple score", "Idea review & decision support", "Free for everyone"],
       screenshots: [
         "images/apps/idea-validator.png",
         "images/apps/idea-validator-results.png",
@@ -524,7 +521,7 @@ const ProductsScene: React.FC = () => {
             fontSize: 52,
           }}
         >
-          Ready-made apps. <span style={{ color: C.gold }}>Real solutions.</span>
+          Ready-made apps. <span style={{ color: C.greenBright }}>Real solutions.</span>
         </div>
 
         {/* Products area — cards on left, screenshots scroll on right */}
@@ -537,20 +534,19 @@ const ProductsScene: React.FC = () => {
             flex: 1,
           }}
         >
-          {/* Left: Product cards stacked — compact to fit all 7, pop-out on narration */}
+          {/* Left: Product cards stacked */}
           <div style={{ display: "flex", flexDirection: "column", gap: 5, width: 280, maxHeight: 950, overflow: "hidden" }}>
             {products.map((p, i) => {
               const delay = p.cardStart;
               const cardOpacity = clamp(localFrame - delay, [0, 12], [0, 1]);
 
-              // Pop-out animation synced to narration — stays enlarged entire narration, shrinks when next product starts
               const POP_UP = 12;
               const nextPopFrame = (i + 1 < products.length) ? products[i + 1].screenshotStart : p.screenshotStart + 170;
               const narrationDuration = nextPopFrame - p.screenshotStart;
               const POP_DOWN = 15;
-              const POP_HOLD = narrationDuration - POP_UP - POP_DOWN;  // hold for entire narration window
+              const POP_HOLD = narrationDuration - POP_UP - POP_DOWN;
               const POP_TOTAL = POP_UP + POP_HOLD + POP_DOWN;
-              const popFrame = p.screenshotStart;  // pop when narrator says this product name
+              const popFrame = p.screenshotStart;
               const relFrame = localFrame - popFrame;
 
               let popScale = 1;
@@ -587,22 +583,28 @@ const ProductsScene: React.FC = () => {
                 popOpacity = 1;
               }
 
-              // Highlight the currently featured product
               const isFeatured = localFrame >= p.screenshotStart - 15 && localFrame < p.screenshotStart + 170;
+
+              // Determine price badge colors
+              const isFree = p.price === "FREE";
+              const isCustomBuild = p.price.startsWith("Custom");
+              const priceBg = isFree ? C.gold + "22" : isCustomBuild ? C.goldLight + "22" : C.green + "22";
+              const priceColor = isFree ? C.gold : isCustomBuild ? C.goldBright : C.greenBright;
+              const priceFontSize = isCustomBuild ? 10 : 12;
 
               return (
                 <div
                   key={i}
                   style={{
                     background: isFeatured
-                      ? `linear-gradient(135deg, ${C.crimson}22 0%, ${C.surfaceCard} 100%)`
-                      : `linear-gradient(180deg, ${C.surfaceCard} 0%, #14141480 100%)`,
-                    border: `1px solid ${p.price === "FREE" ? C.gold + "60" : isFeatured ? C.crimsonLight + "80" : C.crimsonDark + "40"}`,
+                      ? `linear-gradient(135deg, ${C.green}22 0%, ${C.surfaceCard} 100%)`
+                      : `linear-gradient(180deg, ${C.surfaceCard} 0%, #0c1a0f80 100%)`,
+                    border: `1px solid ${isFree ? C.gold + "60" : isFeatured ? C.greenLight + "80" : C.green + "30"}`,
                     borderRadius: 10,
                     padding: "10px 14px",
                     opacity: cardOpacity * popOpacity,
                     transform: `scale(${popScale}) translateY(${popYBounce}px)`,
-                    boxShadow: `0 0 ${popGlow}px ${C.crimson}44, 0 4px 20px rgba(0,0,0,0.3)`,
+                    boxShadow: `0 0 ${popGlow}px ${C.green}44, 0 4px 20px rgba(0,0,0,0.3)`,
                     transformOrigin: "left center",
                     transition: "none",
                   }}
@@ -617,15 +619,14 @@ const ProductsScene: React.FC = () => {
                         {p.tagline}
                       </div>
                     </div>
+                    {/* Single price per product */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
                       <div
                         style={{
                           display: "inline-block",
-                          background: p.price === "FREE"
-                            ? `${C.gold}22`
-                            : `${C.crimson}22`,
-                          color: p.price === "FREE" ? C.gold : C.crimsonLight,
-                          fontSize: 12,
+                          background: priceBg,
+                          color: priceColor,
+                          fontSize: priceFontSize,
                           fontWeight: 700,
                           padding: "2px 8px",
                           borderRadius: 5,
@@ -634,22 +635,6 @@ const ProductsScene: React.FC = () => {
                       >
                         {p.price === "FREE" ? "FREE" : p.price}
                       </div>
-                      {p.price2 && (
-                        <div
-                          style={{
-                            display: "inline-block",
-                            background: `${C.gold}15`,
-                            color: C.gold,
-                            fontSize: 10,
-                            fontWeight: 600,
-                            padding: "1px 6px",
-                            borderRadius: 4,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          2 Devices: {p.price2}
-                        </div>
-                      )}
                     </div>
                   </div>
                   <div style={{ marginTop: 4 }}>
@@ -676,7 +661,7 @@ const ProductsScene: React.FC = () => {
             })}
           </div>
 
-          {/* Right: Large showcase screenshot area — fills remaining width */}
+          {/* Right: Large showcase screenshot area */}
           <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", position: "relative", height: "100%", padding: "30px 40px 30px 10px" }}>
             {products.map((p, i) => {
               const screenshotStartFrame = p.screenshotStart;
@@ -691,7 +676,6 @@ const ProductsScene: React.FC = () => {
 
               if (totalOpacity <= 0) return null;
 
-              // Scroll through each screenshot sequentially — slower (0.8px/frame)
               const screenshotPhase = localFrame - screenshotStartFrame;
               const totalScreens = p.screenshots.length;
               const framesPerScreen = 80;
@@ -700,7 +684,7 @@ const ProductsScene: React.FC = () => {
                 totalScreens - 1
               );
               const screenLocalFrame = screenshotPhase - currentScreenIdx * framesPerScreen;
-              const scrollOffset = Math.max(0, (screenLocalFrame - 15) * 0.8);  // slower scroll
+              const scrollOffset = Math.max(0, (screenLocalFrame - 15) * 0.8);
 
               const currentSrc = p.screenshots[currentScreenIdx];
 
@@ -719,16 +703,16 @@ const ProductsScene: React.FC = () => {
                   >
                     {p.icon} {p.name}
                   </div>
-                  {/* Large showcase screenshot — auto-sizes to fill available space */}
+                  {/* Large showcase screenshot */}
                   <div
                     style={{
                       width: "100%",
                       flex: 1,
                       borderRadius: 20,
                       overflow: "hidden",
-                      border: `3px solid ${C.crimsonDark}60`,
+                      border: `3px solid ${C.green}40`,
                       background: C.darkAlt,
-                      boxShadow: `0 24px 80px rgba(0,0,0,0.6), 0 0 60px ${C.crimsonDark}44`,
+                      boxShadow: `0 24px 80px rgba(0,0,0,0.6), 0 0 60px ${C.green}22`,
                       display: "flex",
                       justifyContent: "center",
                       alignItems: "flex-start",
@@ -755,8 +739,6 @@ const ProductsScene: React.FC = () => {
 };
 
 // ── SCENE 4: Custom Build Services ($79) ──
-// Audio: "Need something custom built?" (0-2s), "We make apps for farms, e-commerce, restaurants and more." (2-6.5s), "Starting at just $79." (6.5-9s)
-// 4 tools pop outward & enlarge as narrator mentions each, then shrink back
 const ServicesScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -764,8 +746,6 @@ const ServicesScene: React.FC = () => {
 
   const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
 
-  // 4 tools — timed to when narrator says each one
-  // Farms at ~2.2s (frame 66), E-commerce at ~3.5s (frame 105), Restaurants at ~4.8s (frame 144), And More at ~5.8s (frame 174)
   const toolCards = [
     { icon: "🌾", label: "Farms", popFrame: 66 },
     { icon: "🛒", label: "E-commerce", popFrame: 105 },
@@ -773,17 +753,15 @@ const ServicesScene: React.FC = () => {
     { icon: "➕", label: "And More", popFrame: 174 },
   ];
 
-  // Pop animation: scale up, hold enlarged until next tool is mentioned, then shrink back
   const POP_UP = 15;
   const POP_DOWN = 20;
-  const MIN_HOLD = 45;  // minimum hold so card stays visibly enlarged for ~1.5s
-  // Each tool's hold is dynamic — stays enlarged until the next tool pops (with minimum hold)
+  const MIN_HOLD = 45;
   const toolPopDuration = (i: number) => {
     if (i + 1 < toolCards.length) {
       const gap = toolCards[i + 1].popFrame - toolCards[i].popFrame;
       return Math.max(gap, POP_UP + MIN_HOLD + POP_DOWN);
     }
-    return POP_UP + MIN_HOLD + POP_DOWN + 55; // last tool: longer hold
+    return POP_UP + MIN_HOLD + POP_DOWN + 55;
   };
   const POP_TOTAL = (i: number) => toolPopDuration(i);
 
@@ -810,10 +788,10 @@ const ServicesScene: React.FC = () => {
             textAlign: "center",
           }}
         >
-          Need something built? <span style={{ color: C.crimsonLight }}>We'll build it.</span>
+          Need something built? <span style={{ color: C.greenBright }}>We'll build it.</span>
         </div>
 
-        {/* 4 tool cards in a row — pop outward & enlarge as mentioned */}
+        {/* 4 tool cards in a row */}
         <div
           style={{
             display: "flex",
@@ -828,7 +806,6 @@ const ServicesScene: React.FC = () => {
             const totalFrames = POP_TOTAL(i);
             const holdFrames = toolPopDuration(i) - POP_UP - POP_DOWN;
 
-            // Default: card is visible but dim/small
             const baseOpacity = clamp(localFrame - (tool.popFrame - 30), [0, 20], [0, 0.35]);
             const baseScale = 0.7;
 
@@ -839,14 +816,12 @@ const ServicesScene: React.FC = () => {
 
             if (relFrame >= 0 && relFrame < totalFrames) {
               if (relFrame < POP_UP) {
-                // Phase 1: Pop up (scale from 1x → 1.5x)
                 const t = relFrame / POP_UP;
                 activeScale = interpolate(t, [0, 0.4, 1], [1, 1.7, 1.5]);
                 activeOpacity = interpolate(t, [0, 1], [0.35, 1]);
                 activeGlow = interpolate(t, [0, 1], [0, 60]);
                 yBounce = interpolate(t, [0, 0.5, 1], [0, -25, -15]);
               } else if (relFrame < POP_UP + holdFrames) {
-                // Phase 2: Hold enlarged (slight pulse) — stays big until next card
                 const holdFrame = relFrame - POP_UP;
                 const pulse = Math.sin(holdFrame / holdFrames * Math.PI * 2) * 0.05;
                 activeScale = 1.5 + pulse;
@@ -854,7 +829,6 @@ const ServicesScene: React.FC = () => {
                 activeGlow = 60;
                 yBounce = -15;
               } else {
-                // Phase 3: Shrink back to normal
                 const shrinkFrame = relFrame - POP_UP - holdFrames;
                 const t = shrinkFrame / POP_DOWN;
                 activeScale = interpolate(t, [0, 1], [1.5, 1]);
@@ -863,7 +837,6 @@ const ServicesScene: React.FC = () => {
                 yBounce = interpolate(t, [0, 1], [-15, 0]);
               }
             } else if (relFrame >= totalFrames) {
-              // After pop: stay at normal size, slightly brighter
               activeScale = 1;
               activeOpacity = 0.85;
               activeGlow = 20;
@@ -883,12 +856,12 @@ const ServicesScene: React.FC = () => {
                   justifyContent: "center",
                   width: 160,
                   height: 200,
-                  background: `${C.crimson}20`,
-                  border: `2px solid ${C.crimsonDark}60`,
+                  background: `${C.green}20`,
+                  border: `2px solid ${C.green}40`,
                   borderRadius: 20,
                   opacity: finalOpacity,
                   transform: `scale(${finalScale}) translateY(${yBounce}px)`,
-                  boxShadow: `0 0 ${activeGlow}px ${C.crimson}44, 0 20px 60px rgba(0,0,0,0.4)`,
+                  boxShadow: `0 0 ${activeGlow}px ${C.green}44, 0 20px 60px rgba(0,0,0,0.4)`,
                   transition: "none",
                 }}
               >
@@ -909,7 +882,7 @@ const ServicesScene: React.FC = () => {
           })}
         </div>
 
-        {/* Price badge — appears after all tools have popped (~frame 230 = 7.7s, narrator says "Starting at just $79" at 6.5s) */}
+        {/* Price badge */}
         <div
           style={{
             display: "inline-block",
@@ -932,10 +905,7 @@ const ServicesScene: React.FC = () => {
   );
 };
 
-// ── SCENE 5: Trust — 4 items pop outward & enlarge as narrator mentions each ──
-// Audio: "YJRT" (0-2s), "Smooth, intuitive experience." (2-5s), "DataStaysPrivate." (5-7s), 
-//        "Secure Stripe Checkout." (7-9s), "And no subscriptions ever." (9-11s), 
-//        "One purchase, yours forever." (11-14s)
+// ── SCENE 5: Trust ──
 const TrustScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -943,9 +913,6 @@ const TrustScene: React.FC = () => {
 
   const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
 
-  // 4 trust items — timed to when narrator says each one
-  // "Smooth experience" at ~2s (frame 60), "Data stays private" at ~5s (frame 150), 
-  // "Secure Stripe" at ~7s (frame 210), "No subscriptions" at ~9s (frame 270)
   const trustItems = [
     { icon: "⚡", title: "Smooth Experience", desc: "Intuitive design that just works", popFrame: 60 },
     { icon: "🔒", title: "Data Stays Private", desc: "Your data stays on your device", popFrame: 150 },
@@ -953,16 +920,15 @@ const TrustScene: React.FC = () => {
     { icon: "🛡️", title: "No Subscriptions", desc: "One purchase, yours forever", popFrame: 270 },
   ];
 
-  // Pop animation: scale up, hold enlarged until next trust item is mentioned, then shrink back
   const POP_UP = 15;
   const POP_DOWN = 20;
-  const MIN_HOLD = 45;  // minimum hold so card stays visibly enlarged for ~1.5s
+  const MIN_HOLD = 45;
   const trustPopDuration = (i: number) => {
     if (i + 1 < trustItems.length) {
       const gap = trustItems[i + 1].popFrame - trustItems[i].popFrame;
       return Math.max(gap, POP_UP + MIN_HOLD + POP_DOWN);
     }
-    return POP_UP + MIN_HOLD + POP_DOWN + 55; // last item: longer hold
+    return POP_UP + MIN_HOLD + POP_DOWN + 55;
   };
   const POP_TOTAL = (i: number) => trustPopDuration(i);
 
@@ -1005,7 +971,6 @@ const TrustScene: React.FC = () => {
             const totalFrames = POP_TOTAL(i);
             const holdFrames = trustPopDuration(i) - POP_UP - POP_DOWN;
 
-            // Default: card is visible but dim
             const baseOpacity = clamp(localFrame - (t.popFrame - 30), [0, 20], [0, 0.3]);
 
             let activeScale = 0;
@@ -1015,14 +980,12 @@ const TrustScene: React.FC = () => {
 
             if (relFrame >= 0 && relFrame < totalFrames) {
               if (relFrame < POP_UP) {
-                // Phase 1: Pop up
                 const tt = relFrame / POP_UP;
                 activeScale = interpolate(tt, [0, 0.4, 1], [1, 1.6, 1.45]);
                 activeOpacity = interpolate(tt, [0, 1], [0.3, 1]);
                 activeGlow = interpolate(tt, [0, 1], [0, 50]);
                 yBounce = interpolate(tt, [0, 0.5, 1], [0, -18, -12]);
               } else if (relFrame < POP_UP + holdFrames) {
-                // Phase 2: Hold enlarged — stays big until next item
                 const holdFrame = relFrame - POP_UP;
                 const pulse = Math.sin(holdFrame / holdFrames * Math.PI * 2) * 0.04;
                 activeScale = 1.45 + pulse;
@@ -1030,7 +993,6 @@ const TrustScene: React.FC = () => {
                 activeGlow = 50;
                 yBounce = -12;
               } else {
-                // Phase 3: Shrink back
                 const shrinkFrame = relFrame - POP_UP - holdFrames;
                 const tt = shrinkFrame / POP_DOWN;
                 activeScale = interpolate(tt, [0, 1], [1.45, 1]);
@@ -1137,7 +1099,7 @@ const CTAScene: React.FC = () => {
             opacity: nameOpacity,
           }}
         >
-          Ready to build something <span style={{ color: C.crimsonLight }}>great?</span>
+          Ready to build something <span style={{ color: C.greenBright }}>great?</span>
         </div>
         <div
           style={{
@@ -1153,14 +1115,14 @@ const CTAScene: React.FC = () => {
           style={{
             transform: `translateY(${ctaY}px) scale(${pulse})`,
             opacity: ctaOpacity,
-            background: C.gold,
-            color: C.dark,
+            background: C.green,
+            color: C.cream,
             fontSize: 24,
             fontWeight: 800,
             padding: "16px 48px",
             borderRadius: 12,
             marginTop: 20,
-            boxShadow: `0 0 40px ${C.gold}44`,
+            boxShadow: `0 0 40px ${C.green}44`,
             letterSpacing: 2,
           }}
         >
@@ -1247,7 +1209,7 @@ export const JRTAdVideo: React.FC = () => {
         <EndCard />
       </Sequence>
 
-      {/* ── Audio Tracks (sections continuous → always in sync) ── */}
+      {/* ── Audio Tracks ── */}
       <Audio src={staticFile("audio/bg-music.mp3")} volume={0.5} />
       <Audio src={staticFile("audio/01-title.mp3")} volume={1} />
       <Sequence from={SECTION.mission.start}>
