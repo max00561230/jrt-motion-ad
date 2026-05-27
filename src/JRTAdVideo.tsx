@@ -411,7 +411,6 @@ const ProductsScene: React.FC = () => {
       icon: "🍔",
       name: "Food Vendor",
       price: "starts at $79",
-      price2: "starts at $110.60",
       tagline: "Serve fast, sell smart",
       features: ["Order management dashboard", "Menu & pricing control", "Custom built for each vendor"],
       screenshots: [
@@ -425,7 +424,6 @@ const ProductsScene: React.FC = () => {
       icon: "🌿",
       name: "LawnCare Manager",
       price: "starts at $79",
-      price2: "starts at $110.60",
       tagline: "Manage jobs, grow your business",
       features: ["Job scheduling & tracking", "Customer management", "Custom built for each vendor"],
       screenshots: [
@@ -439,7 +437,6 @@ const ProductsScene: React.FC = () => {
       icon: "🥬",
       name: "Fresh Market Vendor",
       price: "starts at $79",
-      price2: "starts at $110.60",
       tagline: "From farm stand to online storefront",
       features: ["Online vendor storefront", "Customer shopping page", "Custom built for each vendor"],
       screenshots: [
@@ -453,7 +450,6 @@ const ProductsScene: React.FC = () => {
       icon: "🌾",
       name: "Farm Land Manager",
       price: "$29",
-      price2: "$40.60",
       tagline: "Track your land, your way",
       features: ["Parcel & field tracking", "Goal planning & analytics", "Built for farm owners"],
       screenshots: [
@@ -467,7 +463,6 @@ const ProductsScene: React.FC = () => {
       icon: "🐄",
       name: "HerdLook",
       price: "$39",
-      price2: "$54.60",
       tagline: "Camera-powered herd management",
       features: ["Visual herd tracking", "Health & location alerts", "Built for livestock owners"],
       screenshots: [
@@ -481,7 +476,6 @@ const ProductsScene: React.FC = () => {
       icon: "🤝",
       name: "FLM + HerdLook Bundle",
       price: "$59",
-      price2: "$82.60",
       tagline: "Farm & herd, one toolbox",
       features: ["All Farm Land Manager features", "All HerdLook features", "Save $9 vs buying separately"],
       screenshots: [
@@ -638,7 +632,7 @@ const ProductsScene: React.FC = () => {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {p.price === "FREE" ? "FREE" : `1 Device: ${p.price}`}
+                        {p.price === "FREE" ? "FREE" : p.price}
                       </div>
                       {p.price2 && (
                         <div
