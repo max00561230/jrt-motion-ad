@@ -12,6 +12,25 @@ import {
   Easing,
 } from "remotion";
 
+// ── removeVideoPrices() safety filter ──
+// Strips any accidental price mentions from video text.
+// Product card prices on the website are NOT affected.
+const PRICE_PATTERNS = [
+  /\$?\d{2,3}(?=\s|$|\.)/g,           // dollar amounts
+  /starts?\s+at\s+\$/gi,              // "starts at $"
+  /begin?s?\s+at\s+\$/gi,             // "begins at $"
+  /bundle\s+options?\s+from\s+\$/gi,  // "bundle options from $"
+  /free(?!\s+for\s+everyone)/gi,       // "FREE" except "free for everyone"
+];
+
+function removeVideoPrices(text: string): string {
+  let safe = text;
+  PRICE_PATTERNS.forEach((pat) => {
+    safe = safe.replace(pat, "");
+  });
+  return safe.trim();
+}
+
 // ── JRT Brand Colors — Spring/Green Palette ──
 const C = {
   dark: "#0c1a0f",
@@ -39,15 +58,17 @@ const C = {
   surfaceCardHover: "#223828",
 };
 
-// ── Section Timing (7 products, synced to narration) ──
+// ── Section Timing (8 sections, ~120s at 30fps) ──
+// Synced to regenerated TTS narration durations
 const SECTION = {
-  title:    { start: 0,    dur: 239 },
-  mission:  { start: 239,  dur: 410 },
-  products: { start: 649,  dur: 1562 },
-  services: { start: 2211, dur: 337 },
-  trust:    { start: 2548, dur: 489 },
-  cta:      { start: 3037, dur: 417 },
-  endcard:  { start: 3454, dur: 150 },
+  opening:   { start: 0,    dur: 260 },   // 0:00–0:09 (8.7s)
+  problem:   { start: 260,  dur: 340 },   // 0:09–0:20 (11.3s)
+  solution:  { start: 600,  dur: 430 },   // 0:20–0:34 (14.3s)
+  appTypes:  { start: 1030, dur: 900 },   // 0:34–1:04 (30.0s)
+  workflow:  { start: 1930, dur: 300 },   // 1:04–1:14 (10.0s)
+  demo:      { start: 2230, dur: 410 },   // 1:14–1:28 (13.7s)
+  trust:     { start: 2640, dur: 520 },   // 1:28–1:45 (17.3s)
+  cta:       { start: 3160, dur: 430 },   // 1:45–2:00 (14.3s)
 };
 
 // ── Animation Helpers ──
@@ -60,39 +81,49 @@ const clamp = (frame: number, input: number[], output: number[]) =>
 const springIn = (frame: number, fps: number, delay = 0) =>
   spring({ frame: frame - delay, fps, config: { damping: 12, stiffness: 100 } });
 
-// ── Shared Styles ──
+// ── Shared Styles (larger text, better contrast) ──
 const sectionLabel: React.CSSProperties = {
-  fontSize: 28,
+  fontSize: 32,
   color: C.gold,
-  letterSpacing: 10,
+  letterSpacing: 12,
   textTransform: "uppercase",
   fontWeight: 700,
 };
 const headline: React.CSSProperties = {
-  fontSize: 58,
+  fontSize: 62,
   color: C.white,
   fontWeight: 800,
   lineHeight: 1.15,
 };
 const bodyText: React.CSSProperties = {
-  fontSize: 26,
-  color: C.gray300,
+  fontSize: 28,
+  color: C.cream,
   lineHeight: 1.6,
-  maxWidth: 900,
+  maxWidth: 1000,
 };
 
-// ── PARTICLES BACKGROUND ──
-const Particles: React.FC<{ opacity?: number }> = ({ opacity = 0.15 }) => {
+// ── Brighter Gradient Background ──
+const GradientBG: React.FC = () => (
+  <AbsoluteFill
+    style={{
+      background: `radial-gradient(ellipse at 30% 20%, ${C.green}25 0%, ${C.dark} 60%),
+                    radial-gradient(ellipse at 70% 80%, ${C.gold}18 0%, ${C.dark} 50%),
+                    ${C.dark}`,
+    }}
+  />
+);
+
+// ── Particle Background ──
+const Particles: React.FC<{ opacity?: number }> = ({ opacity = 0.12 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
   const particles = React.useMemo(() => {
     const arr = [];
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 40; i++) {
       arr.push({
         x: Math.random() * 1920,
         y: Math.random() * 1080,
-        size: 2 + Math.random() * 5,
-        speed: 0.5 + Math.random() * 1.2,
+        size: 2 + Math.random() * 4,
+        speed: 0.4 + Math.random() * 1,
         phase: Math.random() * Math.PI * 2,
       });
     }
@@ -125,58 +156,8 @@ const Particles: React.FC<{ opacity?: number }> = ({ opacity = 0.15 }) => {
   );
 };
 
-// ── GREEN GRADIENT BACKGROUND ──
-const GradientBG: React.FC = () => (
-  <AbsoluteFill
-    style={{
-      background: `radial-gradient(ellipse at 30% 20%, ${C.green}18 0%, ${C.dark} 60%),
-                    radial-gradient(ellipse at 70% 80%, ${C.gold}12 0%, ${C.dark} 50%),
-                    ${C.dark}`,
-    }}
-  />
-);
-
-// ── SCROLLING SCREENSHOT COMPONENT ──
-const ScrollingScreenshot: React.FC<{
-  src: string;
-  x: number;
-  width: number;
-  height: number;
-  localFrame: number;
-  startFrame: number;
-  scrollSpeed?: number;
-}> = ({ src, x, width, height, localFrame, startFrame, scrollSpeed = 0.8 }) => {
-  const fadeIn = clamp(localFrame - startFrame, [0, 15], [0, 1]);
-  const scrollOffset = Math.max(0, localFrame - startFrame - 10) * scrollSpeed;
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: x,
-        top: 80,
-        width,
-        height,
-        overflow: "hidden",
-        borderRadius: 16,
-        border: `2px solid ${C.green}40`,
-        opacity: fadeIn,
-        boxShadow: `0 12px 50px ${C.dark}cc, 0 0 30px ${C.green}18`,
-      }}
-    >
-      <Img
-        src={staticFile(src)}
-        style={{
-          width,
-          transform: `translateY(-${scrollOffset}px)`,
-        }}
-      />
-    </div>
-  );
-};
-
-// ── SCENE 1: Title Intro ──
-const TitleIntro: React.FC = () => {
+// ── SCENE 1: Opening / Brand Hook ──
+const OpeningScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -187,11 +168,11 @@ const TitleIntro: React.FC = () => {
   const nameY = interpolate(nameProgress, [0, 1], [40, 0]);
   const nameOpacity = clamp(frame - 15, [0, 15], [0, 1]);
 
-  const tagProgress = springIn(frame, fps, 30);
+  const tagProgress = springIn(frame, fps, 35);
   const tagY = interpolate(tagProgress, [0, 1], [30, 0]);
-  const tagOpacity = clamp(frame - 30, [0, 15], [0, 1]);
+  const tagOpacity = clamp(frame - 35, [0, 15], [0, 1]);
 
-  const fadeOut = clamp(frame, [SECTION.title.dur - 30, SECTION.title.dur], [1, 0]);
+  const fadeOut = clamp(frame, [SECTION.opening.dur - 30, SECTION.opening.dur], [1, 0]);
 
   return (
     <AbsoluteFill style={{ opacity: fadeOut }}>
@@ -202,27 +183,27 @@ const TitleIntro: React.FC = () => {
           justifyContent: "center",
           alignItems: "center",
           flexDirection: "column",
-          gap: 24,
+          gap: 28,
         }}
       >
-        {/* Warm green glow behind logo */}
+        {/* Warm glow behind logo */}
         <div
           style={{
-            width: 200,
-            height: 200,
-            borderRadius: 100,
-            background: `radial-gradient(circle, ${C.greenLight}33 0%, ${C.gold}22 40%, transparent 70%)`,
+            width: 220,
+            height: 220,
+            borderRadius: 110,
+            background: `radial-gradient(circle, ${C.greenLight}40 0%, ${C.gold}30 40%, transparent 70%)`,
             position: "absolute",
             transform: `scale(${1 + 0.12 * Math.sin(frame * 0.08)})`,
-            filter: "blur(25px)",
+            filter: "blur(30px)",
           }}
         />
         <Img
           src={staticFile("images/jrt-logo.png")}
           style={{
-            width: 140,
-            height: 140,
-            borderRadius: 20,
+            width: 160,
+            height: 160,
+            borderRadius: 24,
             transform: `scale(${logoScale})`,
             opacity: logoProgress,
           }}
@@ -230,7 +211,7 @@ const TitleIntro: React.FC = () => {
         <div
           style={{
             ...headline,
-            fontSize: 52,
+            fontSize: 58,
             color: C.white,
             transform: `translateY(${nameY}px)`,
             opacity: nameOpacity,
@@ -243,23 +224,24 @@ const TitleIntro: React.FC = () => {
           style={{
             ...bodyText,
             color: C.greenBright,
-            fontSize: 24,
+            fontSize: 26,
             letterSpacing: 3,
             textTransform: "uppercase",
             fontWeight: 600,
             transform: `translateY(${tagY}px)`,
             opacity: tagOpacity,
+            textAlign: "center",
           }}
         >
-          Ready-Made Apps, Customized for Your Business
+          {removeVideoPrices("Simple web apps for small businesses, farms, and vendors.")}
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
-// ── SCENE 2: Mission ──
-const MissionScene: React.FC = () => {
+// ── SCENE 2: The Problem ──
+const ProblemScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const localFrame = frame;
@@ -267,17 +249,18 @@ const MissionScene: React.FC = () => {
   const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
   const headerY = interpolate(springIn(localFrame, fps, 0), [0, 1], [40, 0]);
 
-  const beliefs = [
-    { icon: "🎯", title: "Purpose-Driven", desc: "Every feature solves a real problem", popFrame: 40 },
-    { icon: "📈", title: "Grow Your Revenue", desc: "Tools that help you earn more, effortlessly", popFrame: 75 },
-    { icon: "🔄", title: "Easy Workflow", desc: "Designed so you can focus on your business", popFrame: 110 },
-    { icon: "🛡️", title: "Your Data, Your Device", desc: "Private by design, not by policy", popFrame: 150 },
+  const problems = [
+    { icon: "📝", title: "Paper Notes", desc: "Orders get lost in notebooks", popFrame: 50 },
+    { icon: "📋", title: "Missed Orders", desc: "No simple way to capture requests", popFrame: 90 },
+    { icon: "📁", title: "Scattered Records", desc: "Info spread across too many tools", popFrame: 130 },
+    { icon: "📱", title: "No Customer Page", desc: "Hard for customers to find you", popFrame: 170 },
+    { icon: "🔧", title: "Too Many Tools", desc: "Nothing works together", popFrame: 210 },
   ];
 
   return (
     <AbsoluteFill>
       <GradientBG />
-      <Particles opacity={0.12} />
+      <Particles opacity={0.1} />
       <AbsoluteFill
         style={{
           justifyContent: "center",
@@ -293,7 +276,7 @@ const MissionScene: React.FC = () => {
             transform: `translateY(${headerY}px)`,
           }}
         >
-          Our Mission
+          THE PROBLEM
         </div>
         <div
           style={{
@@ -302,88 +285,50 @@ const MissionScene: React.FC = () => {
             transform: `translateY(${headerY}px)`,
             marginTop: 16,
             textAlign: "center",
+            fontSize: 52,
           }}
         >
-          Simple tools. <span style={{ color: C.greenBright }}>Real results.</span> No guesswork.
+          {removeVideoPrices("Running a small business")}
+          <br />
+          <span style={{ color: C.gold }}>
+            {removeVideoPrices("should not feel scattered.")}
+          </span>
         </div>
         <div
           style={{
             display: "flex",
-            gap: 28,
-            marginTop: 60,
+            gap: 20,
+            marginTop: 40,
             flexWrap: "wrap",
             justifyContent: "center",
           }}
         >
-          {beliefs.map((b, i) => {
-            const delay = b.popFrame;
+          {problems.map((p, i) => {
+            const delay = p.popFrame;
             const cardOpacity = clamp(localFrame - delay, [0, 15], [0, 1]);
-            const cardY = interpolate(springIn(localFrame, fps, delay), [0, 1], [60, 0]);
-
-            const POP_UP = 12;
-            const MIN_HOLD = 30;
-            const nextPop = (i + 1 < beliefs.length) ? beliefs[i + 1].popFrame : b.popFrame + 130;
-            const narrationDur = nextPop - b.popFrame;
-            const POP_DOWN = 12;
-            const POP_HOLD = Math.max(narrationDur - POP_UP - POP_DOWN, MIN_HOLD);
-            const POP_TOTAL = POP_UP + POP_HOLD + POP_DOWN;
-            const relFrame = localFrame - b.popFrame;
-
-            let popScale = 1;
-            let popGlow = 0;
-
-            if (relFrame >= 0 && relFrame < POP_TOTAL) {
-              if (relFrame < POP_UP) {
-                const t = relFrame / POP_UP;
-                popScale = interpolate(t, [0, 0.5, 1], [1, 1.35, 1.2]);
-                popGlow = interpolate(t, [0, 1], [0, 40]);
-              } else if (relFrame < POP_UP + POP_HOLD) {
-                const holdFrame = relFrame - POP_UP;
-                const pulse = Math.sin(holdFrame / POP_HOLD * Math.PI * 2) * 0.03;
-                popScale = 1.2 + pulse;
-                popGlow = 40;
-              } else {
-                const shrinkFrame = relFrame - POP_UP - POP_HOLD;
-                const t = shrinkFrame / POP_DOWN;
-                popScale = interpolate(t, [0, 1], [1.2, 1]);
-                popGlow = interpolate(t, [0, 1], [40, 8]);
-              }
-            } else if (relFrame >= POP_TOTAL) {
-              popScale = 1;
-              popGlow = 8;
-            }
+            const cardY = interpolate(springIn(localFrame, fps, delay), [0, 1], [50, 0]);
 
             return (
               <div
                 key={i}
                 style={{
-                  background: popScale > 1.05
-                    ? `linear-gradient(135deg, ${C.green}22 0%, ${C.surfaceCard} 100%)`
-                    : C.surfaceCard,
-                  border: `1px solid ${popScale > 1.05 ? C.greenLight + "80" : C.green + "30"}`,
-                  borderRadius: 16,
-                  padding: "32px 28px",
-                  width: 240,
+                  background: C.surfaceCard,
+                  border: `1px solid ${C.green}40`,
+                  borderRadius: 14,
+                  padding: "20px 18px",
+                  width: 190,
+                  textAlign: "center",
                   opacity: cardOpacity,
-                  transform: `translateY(${cardY}px) scale(${popScale})`,
-                  boxShadow: `0 0 ${popGlow}px ${C.green}33, 0 4px 20px rgba(0,0,0,0.3)`,
-                  transformOrigin: "center bottom",
-                  transition: "none",
+                  transform: `translateY(${cardY}px)`,
+                  boxShadow: `0 0 30px ${C.green}22, 0 4px 16px rgba(0,0,0,0.3)`,
                 }}
               >
-                <div style={{ fontSize: 36, marginBottom: 12 }}>{b.icon}</div>
-                <div
-                  style={{
-                    fontSize: 20,
-                    fontWeight: 700,
-                    color: C.white,
-                    marginBottom: 6,
-                  }}
-                >
-                  {b.title}
+                <div style={{ fontSize: 32, marginBottom: 8 }}>{p.icon}</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: C.white, marginBottom: 4 }}>
+                  {p.title}
                 </div>
-                <div style={{ fontSize: 16, color: C.gray400, lineHeight: 1.5 }}>
-                  {b.desc}
+                <div style={{ fontSize: 14, color: C.gray300, lineHeight: 1.4 }}>
+                  {p.desc}
                 </div>
               </div>
             );
@@ -394,106 +339,168 @@ const MissionScene: React.FC = () => {
   );
 };
 
-// ── SCENE 3: Products with Scrolling Screenshots (7 apps) ──
-const ProductsScene: React.FC = () => {
+// ── SCENE 3: The Solution ──
+const SolutionScene: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const localFrame = frame;
+
+  const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
+  const headerY = interpolate(springIn(localFrame, fps, 0), [0, 1], [40, 0]);
+
+  const steps = [
+    { icon: "🛒", title: "Pick a starter app", popFrame: 60 },
+    { icon: "📤", title: "Send your business details", popFrame: 120 },
+    { icon: "🔍", title: "We prepare your custom build", popFrame: 180 },
+    { icon: "🚀", title: "Launch and start using it", popFrame: 240 },
+  ];
+
+  return (
+    <AbsoluteFill>
+      <GradientBG />
+      <Particles opacity={0.1} />
+      <AbsoluteFill
+        style={{
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 80,
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            ...sectionLabel,
+            opacity: headerOpacity,
+            transform: `translateY(${headerY}px)`,
+          }}
+        >
+          THE SOLUTION
+        </div>
+        <div
+          style={{
+            ...headline,
+            opacity: headerOpacity,
+            transform: `translateY(${headerY}px)`,
+            marginTop: 16,
+            textAlign: "center",
+          }}
+        >
+          {removeVideoPrices("Ready-made apps")}
+          <br />
+          <span style={{ color: C.greenBright }}>
+            {removeVideoPrices("customized for your business.")}
+          </span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 32,
+            marginTop: 50,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          {steps.map((s, i) => {
+            const delay = s.popFrame;
+            const cardOpacity = clamp(localFrame - delay, [0, 15], [0, 1]);
+            const cardY = interpolate(springIn(localFrame, fps, delay), [0, 1], [50, 0]);
+
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div
+                  style={{
+                    background: C.surfaceCard,
+                    border: `2px solid ${C.green}60`,
+                    borderRadius: 16,
+                    padding: "28px 24px",
+                    width: 200,
+                    textAlign: "center",
+                    opacity: cardOpacity,
+                    transform: `translateY(${cardY}px)`,
+                    boxShadow: `0 0 30px ${C.green}22, 0 8px 24px rgba(0,0,0,0.3)`,
+                  }}
+                >
+                  <div style={{ fontSize: 40, marginBottom: 10 }}>{s.icon}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: C.white, lineHeight: 1.3 }}>
+                    {removeVideoPrices(s.title)}
+                  </div>
+                </div>
+                {i < steps.length - 1 && (
+                  <div
+                    style={{
+                      fontSize: 28,
+                      color: C.gold,
+                      opacity: cardOpacity,
+                    }}
+                  >
+                    →
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+// ── SCENE 4: App Types (Product showcase) ──
+const AppTypesScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const localFrame = frame;
 
   const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
 
-  // UPDATED: 7 products with improved marketing copy
-  const products = [
+  const apps = [
     {
       icon: "🍔",
       name: "Food Vendor",
-      price: "Custom build starts at $79",
-      tagline: "A custom food ordering and vendor app",
-      features: ["Menu display & customer order page", "Business profile & contact info", "Pickup details & Stripe-ready checkout"],
-      screenshots: [
-        "images/apps/food-vendor-dashboard.png",
-        "images/apps/food-vendor-orders.png",
-      ],
+      benefit: "Menus, order requests, and customer pages.",
+      screenshots: ["images/apps/food-vendor-dashboard.png", "images/apps/food-vendor-orders.png"],
       screenshotStart: 40,
       cardStart: 30,
     },
     {
       icon: "🌿",
       name: "LawnCare Manager",
-      price: "Custom build starts at $79",
-      tagline: "A custom lawn care booking app",
-      features: ["Customer booking request page", "QR code workflow & service list", "Vendor response process & Stripe checkout"],
-      screenshots: [
-        "images/apps/lawncare-dashboard.png",
-        "images/apps/lawncare-customers.png",
-      ],
-      screenshotStart: 210,
-      cardStart: 195,
+      benefit: "Booking requests and service workflows.",
+      screenshots: ["images/apps/lawncare-dashboard.png", "images/apps/lawncare-customers.png"],
+      screenshotStart: 160,
+      cardStart: 145,
     },
     {
       icon: "🥬",
       name: "Fresh Market Vendor",
-      price: "Custom build starts at $79",
-      tagline: "A custom market vendor storefront app",
-      features: ["Product listings & vendor profile", "Customer order request page", "Pickup info & Stripe-ready checkout"],
-      screenshots: [
-        "images/apps/fm-vendor-shop.png",
-        "images/apps/fm-customer-store.png",
-      ],
-      screenshotStart: 380,
-      cardStart: 365,
+      benefit: "Products, pickup details, and vendor info.",
+      screenshots: ["images/apps/fm-vendor-shop.png", "images/apps/fm-customer-store.png"],
+      screenshotStart: 275,
+      cardStart: 260,
     },
     {
       icon: "🌾",
       name: "Farm Land Manager",
-      price: "$29",
-      tagline: "Simple land, field, and task tracking",
-      features: ["Track fields & property notes", "Farm tasks & land activity", "Reports & local records"],
-      screenshots: [
-        "images/apps/flm-dashboard.png",
-        "images/apps/flm-farms.png",
-      ],
-      screenshotStart: 560,
-      cardStart: 545,
+      benefit: "Fields, land notes, and farm records.",
+      screenshots: ["images/apps/flm-dashboard.png", "images/apps/flm-farms.png"],
+      screenshotStart: 390,
+      cardStart: 375,
     },
     {
       icon: "🐄",
       name: "HerdLook",
-      price: "$39",
-      tagline: "Animal record management for livestock owners",
-      features: ["Animal records, photos & categories", "Birth dates, dam and sire info", "Sorting, notes & herd organization"],
-      screenshots: [
-        "images/apps/herdlook-home.png",
-        "images/apps/herdlook-cattle.png",
-      ],
-      screenshotStart: 720,
-      cardStart: 705,
-    },
-    {
-      icon: "🤝",
-      name: "FLM + HerdLook Bundle",
-      price: "$59",
-      tagline: "Land management and herd records together",
-      features: ["Farm Land Manager included", "HerdLook included", "Save $9 vs buying separately"],
-      screenshots: [
-        "images/apps/flm-dashboard.png",
-        "images/apps/herdlook-home.png",
-      ],
-      screenshotStart: 890,
-      cardStart: 875,
+      benefit: "Animal records, photos, and herd notes.",
+      screenshots: ["images/apps/herdlook-home.png", "images/apps/herdlook-cattle.png"],
+      screenshotStart: 505,
+      cardStart: 490,
     },
     {
       icon: "💡",
       name: "Idea Validator",
-      price: "FREE",
-      tagline: "Test one idea before paying for a full build",
-      features: ["Guided questions & simple score", "Idea review & decision support", "Free for everyone"],
-      screenshots: [
-        "images/apps/idea-validator.png",
-        "images/apps/idea-validator-results.png",
-      ],
-      screenshotStart: 1060,
-      cardStart: 1045,
+      benefit: "Test your idea before building.",
+      screenshots: ["images/apps/idea-validator.png", "images/apps/idea-validator-results.png"],
+      screenshotStart: 620,
+      cardStart: 605,
     },
   ];
 
@@ -510,7 +517,7 @@ const ProductsScene: React.FC = () => {
         }}
       >
         <div style={{ ...sectionLabel, opacity: headerOpacity }}>
-          App Store
+          APP STORE
         </div>
         <div
           style={{
@@ -521,14 +528,15 @@ const ProductsScene: React.FC = () => {
             fontSize: 52,
           }}
         >
-          Ready-made apps. <span style={{ color: C.greenBright }}>Real solutions.</span>
+          {removeVideoPrices("Ready-made apps.")}{" "}
+          <span style={{ color: C.greenBright }}>{removeVideoPrices("Real solutions.")}</span>
         </div>
 
-        {/* Products area — cards on left, screenshots scroll on right */}
+        {/* Products area — cards on left, screenshots on right */}
         <div
           style={{
             display: "flex",
-            marginTop: 30,
+            marginTop: 24,
             width: "100%",
             gap: 30,
             flex: 1,
@@ -536,12 +544,12 @@ const ProductsScene: React.FC = () => {
         >
           {/* Left: Product cards stacked */}
           <div style={{ display: "flex", flexDirection: "column", gap: 5, width: 280, maxHeight: 950, overflow: "hidden" }}>
-            {products.map((p, i) => {
+            {apps.map((p, i) => {
               const delay = p.cardStart;
               const cardOpacity = clamp(localFrame - delay, [0, 12], [0, 1]);
 
               const POP_UP = 12;
-              const nextPopFrame = (i + 1 < products.length) ? products[i + 1].screenshotStart : p.screenshotStart + 170;
+              const nextPopFrame = (i + 1 < apps.length) ? apps[i + 1].screenshotStart : p.screenshotStart + 130;
               const narrationDuration = nextPopFrame - p.screenshotStart;
               const POP_DOWN = 15;
               const POP_HOLD = narrationDuration - POP_UP - POP_DOWN;
@@ -583,14 +591,8 @@ const ProductsScene: React.FC = () => {
                 popOpacity = 1;
               }
 
-              const isFeatured = localFrame >= p.screenshotStart - 15 && localFrame < p.screenshotStart + 170;
-
-              // Determine price badge colors
-              const isFree = p.price === "FREE";
-              const isCustomBuild = p.price.startsWith("Custom");
-              const priceBg = isFree ? C.gold + "22" : isCustomBuild ? C.goldLight + "22" : C.green + "22";
-              const priceColor = isFree ? C.gold : isCustomBuild ? C.goldBright : C.greenBright;
-              const priceFontSize = isCustomBuild ? 10 : 12;
+              const isFeatured = localFrame >= p.screenshotStart - 15 && localFrame < p.screenshotStart + 130;
+              const borderColor = isFeatured ? C.greenLight + "80" : C.green + "30";
 
               return (
                 <div
@@ -599,7 +601,7 @@ const ProductsScene: React.FC = () => {
                     background: isFeatured
                       ? `linear-gradient(135deg, ${C.green}22 0%, ${C.surfaceCard} 100%)`
                       : `linear-gradient(180deg, ${C.surfaceCard} 0%, #0c1a0f80 100%)`,
-                    border: `1px solid ${isFree ? C.gold + "60" : isFeatured ? C.greenLight + "80" : C.green + "30"}`,
+                    border: `1px solid ${borderColor}`,
                     borderRadius: 10,
                     padding: "10px 14px",
                     opacity: cardOpacity * popOpacity,
@@ -613,48 +615,12 @@ const ProductsScene: React.FC = () => {
                     <div style={{ fontSize: 22 }}>{p.icon}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 15, fontWeight: 700, color: C.white }}>
-                        {p.name}
+                        {removeVideoPrices(p.name)}
                       </div>
-                      <div style={{ fontSize: 11, color: C.gray400 }}>
-                        {p.tagline}
-                      </div>
-                    </div>
-                    {/* Single price per product */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-                      <div
-                        style={{
-                          display: "inline-block",
-                          background: priceBg,
-                          color: priceColor,
-                          fontSize: priceFontSize,
-                          fontWeight: 700,
-                          padding: "2px 8px",
-                          borderRadius: 5,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {p.price === "FREE" ? "FREE" : p.price}
+                      <div style={{ fontSize: 12, color: C.gray300 }}>
+                        {removeVideoPrices(p.benefit)}
                       </div>
                     </div>
-                  </div>
-                  <div style={{ marginTop: 4 }}>
-                    {p.features.map((f, fi) => {
-                      const fDelay = delay + 12 + fi * 4;
-                      const fOpacity = clamp(localFrame - fDelay, [0, 6], [0, 1]);
-                      return (
-                        <div
-                          key={fi}
-                          style={{
-                            fontSize: 11,
-                            color: C.gray400,
-                            padding: "1px 0",
-                            opacity: fOpacity,
-                          }}
-                        >
-                          ✓ {f}
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
               );
@@ -663,13 +629,13 @@ const ProductsScene: React.FC = () => {
 
           {/* Right: Large showcase screenshot area */}
           <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", position: "relative", height: "100%", padding: "30px 40px 30px 10px" }}>
-            {products.map((p, i) => {
+            {apps.map((p, i) => {
               const screenshotStartFrame = p.screenshotStart;
               const appearOpacity = clamp(localFrame - screenshotStartFrame, [0, 20], [0, 1]);
-              const disappearFrame = i < products.length - 1
-                ? products[i + 1].screenshotStart - 20
-                : SECTION.products.dur;
-              const disappearOpacity = i < products.length - 1
+              const disappearFrame = i < apps.length - 1
+                ? apps[i + 1].screenshotStart - 20
+                : SECTION.appTypes.dur;
+              const disappearOpacity = i < apps.length - 1
                 ? clamp(localFrame - disappearFrame, [0, 15], [1, 0])
                 : 1;
               const totalOpacity = Math.min(appearOpacity, disappearOpacity);
@@ -678,7 +644,7 @@ const ProductsScene: React.FC = () => {
 
               const screenshotPhase = localFrame - screenshotStartFrame;
               const totalScreens = p.screenshots.length;
-              const framesPerScreen = 80;
+              const framesPerScreen = 70;
               const currentScreenIdx = Math.min(
                 Math.floor(screenshotPhase / framesPerScreen),
                 totalScreens - 1
@@ -690,10 +656,10 @@ const ProductsScene: React.FC = () => {
 
               return (
                 <div key={`ss-${i}`} style={{ position: "absolute", opacity: totalOpacity, width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  {/* Product name label */}
+                  {/* App name label */}
                   <div
                     style={{
-                      fontSize: 28,
+                      fontSize: 30,
                       color: C.gold,
                       fontWeight: 700,
                       letterSpacing: 2,
@@ -701,7 +667,18 @@ const ProductsScene: React.FC = () => {
                       opacity: totalOpacity,
                     }}
                   >
-                    {p.icon} {p.name}
+                    {p.icon} {removeVideoPrices(p.name)}
+                  </div>
+                  {/* Benefit tagline below name */}
+                  <div
+                    style={{
+                      fontSize: 18,
+                      color: C.cream,
+                      marginBottom: 16,
+                      opacity: totalOpacity * 0.9,
+                    }}
+                  >
+                    {removeVideoPrices(p.benefit)}
                   </div>
                   {/* Large showcase screenshot */}
                   <div
@@ -738,32 +715,21 @@ const ProductsScene: React.FC = () => {
   );
 };
 
-// ── SCENE 4: Custom Build Services ($79) ──
-const ServicesScene: React.FC = () => {
+// ── SCENE 5: Workflow (4-step process) ──
+const WorkflowScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const localFrame = frame;
 
   const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
+  const headerY = interpolate(springIn(localFrame, fps, 0), [0, 1], [40, 0]);
 
-  const toolCards = [
-    { icon: "🌾", label: "Farms", popFrame: 66 },
-    { icon: "🛒", label: "E-commerce", popFrame: 105 },
-    { icon: "🍳", label: "Restaurants", popFrame: 144 },
-    { icon: "➕", label: "And More", popFrame: 174 },
+  const steps = [
+    { icon: "1️⃣", title: "Choose Your App", desc: "Pick a ready-made starter", popFrame: 50 },
+    { icon: "2️⃣", title: "Send Your Details", desc: "Share your business info", popFrame: 100 },
+    { icon: "3️⃣", title: "Review Your Build", desc: "We customize it for you", popFrame: 150 },
+    { icon: "4️⃣", title: "Launch", desc: "Start using your app", popFrame: 200 },
   ];
-
-  const POP_UP = 15;
-  const POP_DOWN = 20;
-  const MIN_HOLD = 45;
-  const toolPopDuration = (i: number) => {
-    if (i + 1 < toolCards.length) {
-      const gap = toolCards[i + 1].popFrame - toolCards[i].popFrame;
-      return Math.max(gap, POP_UP + MIN_HOLD + POP_DOWN);
-    }
-    return POP_UP + MIN_HOLD + POP_DOWN + 55;
-  };
-  const POP_TOTAL = (i: number) => toolPopDuration(i);
 
   return (
     <AbsoluteFill>
@@ -777,74 +743,191 @@ const ServicesScene: React.FC = () => {
           flexDirection: "column",
         }}
       >
-        <div style={{ ...sectionLabel, opacity: headerOpacity }}>
-          Custom Build Services
+        <div
+          style={{
+            ...sectionLabel,
+            opacity: headerOpacity,
+            transform: `translateY(${headerY}px)`,
+          }}
+        >
+          HOW IT WORKS
         </div>
         <div
           style={{
             ...headline,
             opacity: headerOpacity,
+            transform: `translateY(${headerY}px)`,
             marginTop: 16,
             textAlign: "center",
           }}
         >
-          Need something built? <span style={{ color: C.greenBright }}>We'll build it.</span>
+          Choose. Customize. Review.{" "}
+          <span style={{ color: C.gold }}>Launch.</span>
         </div>
 
-        {/* 4 tool cards in a row */}
+        {/* 4 workflow steps */}
         <div
           style={{
             display: "flex",
-            gap: 40,
+            gap: 32,
+            marginTop: 50,
             justifyContent: "center",
             alignItems: "center",
-            marginTop: 60,
           }}
         >
-          {toolCards.map((tool, i) => {
-            const relFrame = localFrame - tool.popFrame;
-            const totalFrames = POP_TOTAL(i);
-            const holdFrames = toolPopDuration(i) - POP_UP - POP_DOWN;
+          {steps.map((s, i) => {
+            const delay = s.popFrame;
+            const cardOpacity = clamp(localFrame - delay, [0, 15], [0, 1]);
+            const cardY = interpolate(springIn(localFrame, fps, delay), [0, 1], [60, 0]);
 
-            const baseOpacity = clamp(localFrame - (tool.popFrame - 30), [0, 20], [0, 0.35]);
-            const baseScale = 0.7;
+            const POP_UP = 15;
+            const POP_DOWN = 15;
+            const MIN_HOLD = 60;
+            const POP_TOTAL = POP_UP + MIN_HOLD + POP_DOWN;
+            const relFrame = localFrame - delay;
 
-            let activeScale = 0;
-            let activeOpacity = 0;
-            let activeGlow = 0;
-            let yBounce = 0;
+            let popScale = 1;
+            let popGlow = 0;
 
-            if (relFrame >= 0 && relFrame < totalFrames) {
+            if (relFrame >= 0 && relFrame < POP_TOTAL) {
               if (relFrame < POP_UP) {
                 const t = relFrame / POP_UP;
-                activeScale = interpolate(t, [0, 0.4, 1], [1, 1.7, 1.5]);
-                activeOpacity = interpolate(t, [0, 1], [0.35, 1]);
-                activeGlow = interpolate(t, [0, 1], [0, 60]);
-                yBounce = interpolate(t, [0, 0.5, 1], [0, -25, -15]);
-              } else if (relFrame < POP_UP + holdFrames) {
-                const holdFrame = relFrame - POP_UP;
-                const pulse = Math.sin(holdFrame / holdFrames * Math.PI * 2) * 0.05;
-                activeScale = 1.5 + pulse;
-                activeOpacity = 1;
-                activeGlow = 60;
-                yBounce = -15;
+                popScale = interpolate(t, [0, 0.5, 1], [0.8, 1.1, 1.05]);
+                popGlow = interpolate(t, [0, 1], [0, 50]);
+              } else if (relFrame < POP_UP + MIN_HOLD) {
+                popScale = 1.05;
+                popGlow = 50;
               } else {
-                const shrinkFrame = relFrame - POP_UP - holdFrames;
-                const t = shrinkFrame / POP_DOWN;
-                activeScale = interpolate(t, [0, 1], [1.5, 1]);
-                activeOpacity = interpolate(t, [0, 1], [1, 0.85]);
-                activeGlow = interpolate(t, [0, 1], [60, 20]);
-                yBounce = interpolate(t, [0, 1], [-15, 0]);
+                const t = (relFrame - POP_UP - MIN_HOLD) / POP_DOWN;
+                popScale = interpolate(t, [0, 1], [1.05, 1]);
+                popGlow = interpolate(t, [0, 1], [50, 10]);
               }
-            } else if (relFrame >= totalFrames) {
-              activeScale = 1;
-              activeOpacity = 0.85;
-              activeGlow = 20;
-              yBounce = 0;
+            } else if (relFrame >= POP_TOTAL) {
+              popScale = 1;
+              popGlow = 10;
             }
 
-            const finalScale = relFrame >= 0 ? baseScale + (1 - baseScale) * activeScale : baseScale;
-            const finalOpacity = relFrame >= 0 ? activeOpacity : baseOpacity;
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div
+                  style={{
+                    background: C.surfaceCard,
+                    border: `2px solid ${C.green}50`,
+                    borderRadius: 20,
+                    padding: "32px 28px",
+                    width: 200,
+                    textAlign: "center",
+                    opacity: cardOpacity,
+                    transform: `translateY(${cardY}px) scale(${popScale})`,
+                    boxShadow: `0 0 ${popGlow}px ${C.green}44, 0 12px 40px rgba(0,0,0,0.4)`,
+                  }}
+                >
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>{s.icon}</div>
+                  <div
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 700,
+                      color: C.white,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {removeVideoPrices(s.title)}
+                  </div>
+                  <div style={{ fontSize: 16, color: C.gray300, lineHeight: 1.4 }}>
+                    {removeVideoPrices(s.desc)}
+                  </div>
+                </div>
+                {i < steps.length - 1 && (
+                  <div
+                    style={{
+                      fontSize: 28,
+                      color: C.gold,
+                      opacity: cardOpacity,
+                    }}
+                  >
+                    →
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+// ── SCENE 6: Screenshots / Demo ──
+const DemoScene: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const localFrame = frame;
+
+  const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
+
+  // 3 key demo screenshots with labels
+  const demos = [
+    {
+      label: "Customer Order Page",
+      sublabel: "Simple requests from any phone",
+      src: "images/apps/food-vendor-orders.png",
+      popFrame: 40,
+    },
+    {
+      label: "Admin Dashboard",
+      sublabel: "Manage your app from one place",
+      src: "images/apps/flm-dashboard.png",
+      popFrame: 160,
+    },
+    {
+      label: "Records Manager",
+      sublabel: "Keep business or farm records organized",
+      src: "images/apps/herdlook-cattle.png",
+      popFrame: 280,
+    },
+  ];
+
+  return (
+    <AbsoluteFill>
+      <GradientBG />
+      <Particles opacity={0.08} />
+      <AbsoluteFill
+        style={{
+          justifyContent: "flex-start",
+          alignItems: "center",
+          padding: "60px 80px",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ ...sectionLabel, opacity: headerOpacity }}>
+          SEE IT IN ACTION
+        </div>
+        <div
+          style={{
+            ...headline,
+            opacity: headerOpacity,
+            marginTop: 12,
+            textAlign: "center",
+            fontSize: 48,
+          }}
+        >
+          {removeVideoPrices("Apps that work.")}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 36,
+            marginTop: 40,
+            justifyContent: "center",
+            alignItems: "flex-start",
+            flex: 1,
+          }}
+        >
+          {demos.map((d, i) => {
+            const cardOpacity = clamp(localFrame - d.popFrame, [0, 20], [0, 1]);
+            const cardY = interpolate(springIn(localFrame, fps, d.popFrame), [0, 1], [60, 0]);
+            const cardScale = interpolate(clamp(localFrame - d.popFrame, [0, 15], [0.85, 1]), [0, 1], [0.85, 1]);
 
             return (
               <div
@@ -853,59 +936,60 @@ const ServicesScene: React.FC = () => {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "center",
-                  width: 160,
-                  height: 200,
-                  background: `${C.green}20`,
-                  border: `2px solid ${C.green}40`,
-                  borderRadius: 20,
-                  opacity: finalOpacity,
-                  transform: `scale(${finalScale}) translateY(${yBounce}px)`,
-                  boxShadow: `0 0 ${activeGlow}px ${C.green}44, 0 20px 60px rgba(0,0,0,0.4)`,
-                  transition: "none",
+                  opacity: cardOpacity,
+                  transform: `translateY(${cardY}px) scale(${cardScale})`,
+                  width: 400,
                 }}
               >
-                <div style={{ fontSize: 56 }}>{tool.icon}</div>
                 <div
                   style={{
-                    fontSize: 18,
+                    fontSize: 22,
                     fontWeight: 700,
-                    color: C.white,
-                    marginTop: 12,
+                    color: C.gold,
+                    marginBottom: 6,
                     textAlign: "center",
                   }}
                 >
-                  {tool.label}
+                  {removeVideoPrices(d.label)}
+                </div>
+                <div
+                  style={{
+                    fontSize: 16,
+                    color: C.gray300,
+                    marginBottom: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  {removeVideoPrices(d.sublabel)}
+                </div>
+                <div
+                  style={{
+                    width: "100%",
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    border: `2px solid ${C.green}40`,
+                    background: C.darkAlt,
+                    boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 40px ${C.green}18`,
+                  }}
+                >
+                  <Img
+                    src={staticFile(d.src)}
+                    style={{
+                      width: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
                 </div>
               </div>
             );
           })}
-        </div>
-
-        {/* Price badge */}
-        <div
-          style={{
-            display: "inline-block",
-            background: C.gold,
-            color: C.dark,
-            fontSize: 24,
-            fontWeight: 800,
-            padding: "14px 44px",
-            borderRadius: 12,
-            marginTop: 50,
-            opacity: clamp(localFrame - 220, [0, 15], [0, 1]),
-            boxShadow: `0 0 30px ${C.gold}44`,
-            transform: `scale(${springIn(localFrame, fps, 225).valueOf()})`,
-          }}
-        >
-          Starting at $79
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
-// ── SCENE 5: Trust ──
+// ── SCENE 7: Trust / Why JRT ──
 const TrustScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -914,10 +998,11 @@ const TrustScene: React.FC = () => {
   const headerOpacity = clamp(localFrame, [0, 20], [0, 1]);
 
   const trustItems = [
-    { icon: "⚡", title: "Smooth Experience", desc: "Intuitive design that just works", popFrame: 60 },
-    { icon: "🔒", title: "Data Stays Private", desc: "Your data stays on your device", popFrame: 150 },
-    { icon: "💳", title: "Secure Stripe Checkout", desc: "Industry-standard payment processing", popFrame: 210 },
-    { icon: "🛡️", title: "No Subscriptions", desc: "One purchase, yours forever", popFrame: 270 },
+    { icon: "⚡", title: "Simple Setup", desc: "Ready to use, no complex configuration", popFrame: 60 },
+    { icon: "🎨", title: "Custom Details", desc: "Your branding and business info built in", popFrame: 120 },
+    { icon: "📱", title: "Mobile-Friendly", desc: "Works on any device, any screen", popFrame: 180 },
+    { icon: "💳", title: "Stripe-Ready", desc: "Industry-standard payment processing", popFrame: 240 },
+    { icon: "🛡️", title: "No Subscriptions", desc: "One purchase, yours forever", popFrame: 300 },
   ];
 
   const POP_UP = 15;
@@ -945,7 +1030,7 @@ const TrustScene: React.FC = () => {
         }}
       >
         <div style={{ ...sectionLabel, opacity: headerOpacity }}>
-          Why JRT
+          WHY JRT
         </div>
         <div
           style={{
@@ -955,15 +1040,18 @@ const TrustScene: React.FC = () => {
             textAlign: "center",
           }}
         >
-          Trust built <span style={{ color: C.gold }}>into everything.</span>
+          {removeVideoPrices("Built for practical")}
+          <br />
+          <span style={{ color: C.gold }}>{removeVideoPrices("business use.")}</span>
         </div>
         <div
           style={{
             display: "flex",
-            gap: 36,
-            marginTop: 50,
+            gap: 24,
+            marginTop: 40,
             justifyContent: "center",
             alignItems: "center",
+            flexWrap: "wrap",
           }}
         >
           {trustItems.map((t, i) => {
@@ -1017,8 +1105,8 @@ const TrustScene: React.FC = () => {
                   background: C.surfaceCard,
                   border: `1px solid ${C.gold}25`,
                   borderRadius: 14,
-                  padding: "28px 24px",
-                  width: 230,
+                  padding: "24px 20px",
+                  width: 210,
                   textAlign: "center",
                   opacity: finalOpacity,
                   transform: `scale(${finalScale}) translateY(${yBounce}px)`,
@@ -1026,19 +1114,19 @@ const TrustScene: React.FC = () => {
                   transition: "none",
                 }}
               >
-                <div style={{ fontSize: 40, marginBottom: 10 }}>{t.icon}</div>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>{t.icon}</div>
                 <div
                   style={{
-                    fontSize: 19,
+                    fontSize: 18,
                     fontWeight: 700,
                     color: C.gold,
-                    marginBottom: 6,
+                    marginBottom: 4,
                   }}
                 >
-                  {t.title}
+                  {removeVideoPrices(t.title)}
                 </div>
-                <div style={{ fontSize: 15, color: C.gray400, lineHeight: 1.5 }}>
-                  {t.desc}
+                <div style={{ fontSize: 14, color: C.gray300, lineHeight: 1.4 }}>
+                  {removeVideoPrices(t.desc)}
                 </div>
               </div>
             );
@@ -1049,7 +1137,7 @@ const TrustScene: React.FC = () => {
   );
 };
 
-// ── SCENE 6: CTA ──
+// ── SCENE 8: CTA ──
 const CTAScene: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -1066,7 +1154,7 @@ const CTAScene: React.FC = () => {
   const ctaY = interpolate(ctaProgress, [0, 1], [30, 0]);
   const ctaOpacity = clamp(localFrame - 40, [0, 15], [0, 1]);
 
-  const urlOpacity = clamp(localFrame - 60, [0, 20], [0, 1]);
+  const phoneOpacity = clamp(localFrame - 70, [0, 20], [0, 1]);
 
   const pulse = interpolate(Math.sin(frame * 0.1), [-1, 1], [0.97, 1.03]);
 
@@ -1097,9 +1185,10 @@ const CTAScene: React.FC = () => {
             ...headline,
             transform: `translateY(${nameY}px)`,
             opacity: nameOpacity,
+            textAlign: "center",
           }}
         >
-          Ready to build something <span style={{ color: C.greenBright }}>great?</span>
+          {removeVideoPrices("Ready to build something useful?")}
         </div>
         <div
           style={{
@@ -1109,7 +1198,7 @@ const CTAScene: React.FC = () => {
             opacity: nameOpacity,
           }}
         >
-          Visit us today and get started.
+          Visit jaderosetech.com and start your app build.
         </div>
         <div
           style={{
@@ -1117,66 +1206,27 @@ const CTAScene: React.FC = () => {
             opacity: ctaOpacity,
             background: C.green,
             color: C.cream,
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: 800,
-            padding: "16px 48px",
-            borderRadius: 12,
+            padding: "18px 52px",
+            borderRadius: 14,
             marginTop: 20,
             boxShadow: `0 0 40px ${C.green}44`,
             letterSpacing: 2,
           }}
         >
-          Jade Rose Tech .com
+          jaderosetech.com
         </div>
         <div
           style={{
-            fontSize: 22,
+            fontSize: 24,
             color: C.gold,
             marginTop: 12,
-            opacity: urlOpacity,
-            letterSpacing: 3,
+            opacity: phoneOpacity,
+            letterSpacing: 2,
           }}
         >
-          🌾 DIGITAL PRODUCTS THAT WORK FOR YOU
-        </div>
-      </AbsoluteFill>
-    </AbsoluteFill>
-  );
-};
-
-// ── SCENE 7: End Card ──
-const EndCard: React.FC = () => {
-  const frame = useCurrentFrame();
-  const localFrame = frame;
-
-  const fade = clamp(localFrame, [0, 30], [0, 1]);
-  const breathe = interpolate(Math.sin(frame * 0.06), [-1, 1], [0.95, 1.05]);
-
-  return (
-    <AbsoluteFill style={{ opacity: fade }}>
-      <GradientBG />
-      <AbsoluteFill
-        style={{
-          justifyContent: "center",
-          alignItems: "center",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
-        <Img
-          src={staticFile("images/jrt-logo.png")}
-          style={{
-            width: 100,
-            height: 100,
-            borderRadius: 14,
-            transform: `scale(${breathe})`,
-          }}
-        />
-        <div style={{ fontSize: 28, color: C.gold, fontWeight: 700, letterSpacing: 4 }}>
-          JADE ROSE TECHNOLOGY
-        </div>
-        <div style={{ fontSize: 20, color: C.gray400, letterSpacing: 3 }}>
-          jade rose tech · com
+          📞 252-592-1266
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
@@ -1187,17 +1237,23 @@ const EndCard: React.FC = () => {
 export const JRTAdVideo: React.FC = () => {
   return (
     <AbsoluteFill style={{ background: C.dark }}>
-      <Sequence from={SECTION.title.start} durationInFrames={SECTION.title.dur}>
-        <TitleIntro />
+      <Sequence from={SECTION.opening.start} durationInFrames={SECTION.opening.dur}>
+        <OpeningScene />
       </Sequence>
-      <Sequence from={SECTION.mission.start} durationInFrames={SECTION.mission.dur}>
-        <MissionScene />
+      <Sequence from={SECTION.problem.start} durationInFrames={SECTION.problem.dur}>
+        <ProblemScene />
       </Sequence>
-      <Sequence from={SECTION.products.start} durationInFrames={SECTION.products.dur}>
-        <ProductsScene />
+      <Sequence from={SECTION.solution.start} durationInFrames={SECTION.solution.dur}>
+        <SolutionScene />
       </Sequence>
-      <Sequence from={SECTION.services.start} durationInFrames={SECTION.services.dur}>
-        <ServicesScene />
+      <Sequence from={SECTION.appTypes.start} durationInFrames={SECTION.appTypes.dur}>
+        <AppTypesScene />
+      </Sequence>
+      <Sequence from={SECTION.workflow.start} durationInFrames={SECTION.workflow.dur}>
+        <WorkflowScene />
+      </Sequence>
+      <Sequence from={SECTION.demo.start} durationInFrames={SECTION.demo.dur}>
+        <DemoScene />
       </Sequence>
       <Sequence from={SECTION.trust.start} durationInFrames={SECTION.trust.dur}>
         <TrustScene />
@@ -1205,27 +1261,30 @@ export const JRTAdVideo: React.FC = () => {
       <Sequence from={SECTION.cta.start} durationInFrames={SECTION.cta.dur}>
         <CTAScene />
       </Sequence>
-      <Sequence from={SECTION.endcard.start} durationInFrames={SECTION.endcard.dur}>
-        <EndCard />
-      </Sequence>
 
       {/* ── Audio Tracks ── */}
       <Audio src={staticFile("audio/bg-music.mp3")} volume={0.5} />
-      <Audio src={staticFile("audio/01-title.mp3")} volume={1} />
-      <Sequence from={SECTION.mission.start}>
-        <Audio src={staticFile("audio/02-mission.mp3")} volume={1} />
+      <Audio src={staticFile("audio/01-opening.mp3")} volume={1} />
+      <Sequence from={SECTION.problem.start}>
+        <Audio src={staticFile("audio/02-problem.mp3")} volume={1} />
       </Sequence>
-      <Sequence from={SECTION.products.start}>
-        <Audio src={staticFile("audio/03-products.mp3")} volume={1} />
+      <Sequence from={SECTION.solution.start}>
+        <Audio src={staticFile("audio/03-solution.mp3")} volume={1} />
       </Sequence>
-      <Sequence from={SECTION.services.start}>
-        <Audio src={staticFile("audio/04-services.mp3")} volume={1} />
+      <Sequence from={SECTION.appTypes.start}>
+        <Audio src={staticFile("audio/04-apptypes.mp3")} volume={1} />
+      </Sequence>
+      <Sequence from={SECTION.workflow.start}>
+        <Audio src={staticFile("audio/05-workflow.mp3")} volume={1} />
+      </Sequence>
+      <Sequence from={SECTION.demo.start}>
+        <Audio src={staticFile("audio/06-demo.mp3")} volume={1} />
       </Sequence>
       <Sequence from={SECTION.trust.start}>
-        <Audio src={staticFile("audio/05-trust.mp3")} volume={1} />
+        <Audio src={staticFile("audio/07-trust.mp3")} volume={1} />
       </Sequence>
       <Sequence from={SECTION.cta.start}>
-        <Audio src={staticFile("audio/06-cta.mp3")} volume={1} />
+        <Audio src={staticFile("audio/08-cta.mp3")} volume={1} />
       </Sequence>
     </AbsoluteFill>
   );
